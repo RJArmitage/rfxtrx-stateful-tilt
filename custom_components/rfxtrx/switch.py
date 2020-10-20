@@ -1,7 +1,7 @@
 """Support for RFXtrx switches."""
 import logging
 
-import RFXtrx as rfxtrxmod
+from . import RFXtrx as rfxtrxmod
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import CONF_DEVICES, STATE_ON
@@ -91,7 +91,8 @@ async def async_setup_entry(
 
     # Subscribe to main RFXtrx events
     if discovery_info[CONF_AUTOMATIC_ADD]:
-        hass.helpers.dispatcher.async_dispatcher_connect(SIGNAL_EVENT, switch_update)
+        hass.helpers.dispatcher.async_dispatcher_connect(
+            SIGNAL_EVENT, switch_update)
 
 
 class RfxtrxSwitch(RfxtrxCommandEntity, SwitchEntity):

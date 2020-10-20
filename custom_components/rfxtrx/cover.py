@@ -17,6 +17,8 @@ from . import (
 )
 from .const import COMMAND_OFF_LIST, COMMAND_ON_LIST
 
+from .venetiancover import VenetianCover
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -48,7 +50,7 @@ async def async_setup_entry(
             continue
         device_ids.add(device_id)
 
-        entity = RfxtrxCover(
+        entity = VenetianCover(
             event.device, device_id, entity_info[CONF_SIGNAL_REPETITIONS]
         )
         entities.append(entity)
@@ -73,14 +75,15 @@ async def async_setup_entry(
             "".join(f"{x:02x}" for x in event.data),
         )
 
-        entity = RfxtrxCover(
+        entity = VenetianCover(
             event.device, device_id, DEFAULT_SIGNAL_REPETITIONS, event=event
         )
         async_add_entities([entity])
 
     # Subscribe to main RFXtrx events
     if discovery_info[CONF_AUTOMATIC_ADD]:
-        hass.helpers.dispatcher.async_dispatcher_connect(SIGNAL_EVENT, cover_update)
+        hass.helpers.dispatcher.async_dispatcher_connect(
+            SIGNAL_EVENT, cover_update)
 
 
 class RfxtrxCover(RfxtrxCommandEntity, CoverEntity):

@@ -1,7 +1,7 @@
 """Support for RFXtrx binary sensors."""
 import logging
 
-import RFXtrx as rfxtrxmod
+from . import RFXtrx as rfxtrxmod
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_MOTION,
@@ -140,7 +140,8 @@ async def async_setup_entry(
             event.device,
             device_id,
             event=event,
-            device_class=DEVICE_TYPE_DEVICE_CLASS.get(event.device.type_string),
+            device_class=DEVICE_TYPE_DEVICE_CLASS.get(
+                event.device.type_string),
         )
         async_add_entities([sensor])
 

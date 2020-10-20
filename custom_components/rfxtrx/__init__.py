@@ -4,7 +4,7 @@ import binascii
 from collections import OrderedDict
 import logging
 
-import RFXtrx as rfxtrxmod
+from . import RFXtrx as rfxtrxmod
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -198,7 +198,8 @@ async def async_unload_entry(hass, entry: config_entries.ConfigEntry):
     if not all(
         await asyncio.gather(
             *[
-                hass.config_entries.async_forward_entry_unload(entry, component)
+                hass.config_entries.async_forward_entry_unload(
+                    entry, component)
                 for component in DOMAINS
             ]
         )
@@ -227,7 +228,8 @@ def _create_rfx(config):
             transport_protocol=rfxtrxmod.PyNetworkTransport,
         )
     else:
-        rfx = rfxtrxmod.Connect(config[CONF_DEVICE], None, debug=config[CONF_DEBUG])
+        rfx = rfxtrxmod.Connect(
+            config[CONF_DEVICE], None, debug=config[CONF_DEBUG])
 
     return rfx
 
@@ -283,7 +285,8 @@ async def async_setup_internal(hass, entry: config_entries.ConfigEntry):
             _add_device(event, device_id)
 
         # Callback to HA registered components.
-        hass.helpers.dispatcher.async_dispatcher_send(SIGNAL_EVENT, event, device_id)
+        hass.helpers.dispatcher.async_dispatcher_send(
+            SIGNAL_EVENT, event, device_id)
 
         # Signal event to any other listeners
         fire_event = devices.get(device_id, {}).get(CONF_FIRE_EVENT)
@@ -306,18 +309,21 @@ async def async_setup_internal(hass, entry: config_entries.ConfigEntry):
         """Close connection with RFXtrx."""
         rfx_object.close_connection()
 
-    listener = hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown_rfxtrx)
+    listener = hass.bus.async_listen_once(
+        EVENT_HOMEASSISTANT_STOP, _shutdown_rfxtrx)
 
     hass.data[DOMAIN][DATA_LISTENER] = listener
     hass.data[DOMAIN][DATA_RFXOBJECT] = rfx_object
 
-    rfx_object.event_callback = lambda event: hass.add_job(async_handle_receive, event)
+    rfx_object.event_callback = lambda event: hass.add_job(
+        async_handle_receive, event)
 
     def send(call):
         event = call.data[ATTR_EVENT]
         rfx_object.transport.send(event)
 
-    hass.services.async_register(DOMAIN, SERVICE_SEND, send, schema=SERVICE_SEND_SCHEMA)
+    hass.services.async_register(
+        DOMAIN, SERVICE_SEND, send, schema=SERVICE_SEND_SCHEMA)
 
 
 def get_rfx_object(packetid):

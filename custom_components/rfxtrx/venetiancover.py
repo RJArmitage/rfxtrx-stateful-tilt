@@ -3,20 +3,8 @@ import logging
 import asyncio
 from typing import Any, Callable, Optional, Sequence, cast
 
-from . import (
-    CONF_AUTOMATIC_ADD,
-    CONF_DATA_BITS,
-    CONF_SIGNAL_REPETITIONS,
-    DEFAULT_SIGNAL_REPETITIONS,
-    SIGNAL_EVENT,
-    RfxtrxCommandEntity,
-)
+from . import RfxtrxCommandEntity
 
-from . import RFXtrx as rfxtrxmod
-
-from .const import COMMAND_OFF_LIST, COMMAND_ON_LIST
-
-from homeassistant.components import cover
 from homeassistant.components.cover import (
     DEVICE_CLASS_BLIND,
     SUPPORT_CLOSE,
@@ -26,32 +14,18 @@ from homeassistant.components.cover import (
     SUPPORT_STOP,
     SUPPORT_SET_POSITION,
     SUPPORT_SET_TILT_POSITION,
-    ATTR_CURRENT_POSITION,
-    ATTR_CURRENT_TILT_POSITION,
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     CoverEntity,
 )
+
 from homeassistant.const import (
-    CONF_DEVICES,
-    ATTR_ENTITY_ID,
-    ATTR_ATTRIBUTION,
-    CONF_ENTITY_ID,
-    CONF_NAME,
-    STATE_UNAVAILABLE,
     STATE_CLOSED,
     STATE_CLOSING,
     STATE_OPEN,
     STATE_OPENING)
 
-from homeassistant.core import CALLBACK_TYPE, callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import (
-    ConfigType,
-    DiscoveryInfoType,
-    HomeAssistantType,
-)
+from homeassistant.core import callback
 
 TILT_POS_OPEN = 100
 TILT_POS_HOME = 50
@@ -92,8 +66,8 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
         else:
             config = signal_repetitions
 
-        config, self._euMode = divmod(config, 10)
-        self._euMode = self._euMode > 0
+        config, self._syncMyPos = divmod(config, 10)
+        self._syncMyPos = self._syncMyPos > 0
         config, self._blindMySteps = divmod(config, 100)
         config, self._blindCloseSecs = divmod(config, 100)
         config, self._blindOpenSecs = divmod(config, 100)
@@ -103,7 +77,7 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                      " steps=" + str(self._blindMySteps) +
                      " openSecs=" + str(self._blindOpenSecs) +
                      " closeSecs=" + str(self._blindCloseSecs) +
-                     " euMode=" + str(self._euMode))
+                     " syncMyPos=" + str(self._syncMyPos))
 
     async def async_added_to_hass(self):
         """Restore device state."""
@@ -365,20 +339,32 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                     "End position requested - switching to close operation")
                 await self.async_close_cover(**kwargs)
             else:
-                _LOGGER.info(
-                    "Tilting to required position " + str(self._tilt_position))
-
                 target = round(self._tilt_position / 50 * self._blindMySteps)
                 steps = target - self._step
 
-                _LOGGER.debug(
-                    "Target = " + str(target) + ' from = ' + str(self._step) + " steps = " + str(steps))
+                _LOGGER.info(
+                    "Tilting to required position; position=" + str(self._tilt_position) +
+                    " target=" + str(target) +
+                    " from=" + str(self._step) +
+                    " steps=" + str(steps))
 
                 if (target == self._blindMySteps):
                     _LOGGER.debug(
                         "Tilt is to mid point - switching to my position operation")
                     await self.async_set_cover_my_position(**kwargs)
                 else:
+                    if self._syncMyPos:
+                        if steps < 0 and target < self._blindMySteps and self._step > self._blindMySteps:
+                            steps = steps + (self._step - self._blindMySteps)
+                            _LOGGER.info(
+                                "Tilt crosses mid point from high - syncing my position; steps remaining=" + str(steps))
+                            await self._async_send(self._device.send_my)
+                        elif steps > 0 and target > self._blindMySteps and self._step < self._blindMySteps:
+                            steps = steps - (self._blindMySteps - self._step)
+                            _LOGGER.info(
+                                "Tilt crosses mid point from low - syncing my position; steps remaining=" + str(steps))
+                            await self._async_send(self._device.send_my)
+
                     self._step = target
 
                     # Tilt blind
@@ -442,10 +428,6 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
         """Apply command from rfxtrx."""
         _LOGGER.debug("Invoked _apply_event")
         super()._apply_event(event)
-        # if event.values["Command"] in COMMAND_ON_LIST:
-        #     self._state = True
-        # elif event.values["Command"] in COMMAND_OFF_LIST:
-        #     self._state = False
 
     @callback
     def _handle_event(self, event, device_id):

@@ -1,0 +1,74 @@
+# ************************************************************************************************************
+
+class VenetianRfyDevice(RfyDevice):
+    """ Concrete class for a Somfy venetian blind device """
+
+    def send_my(self, transport):
+        """ Send an 'My' command using the given transport """
+        _LOGGER.debug("Sending RFY my")
+        pkt = lowlevel.Rfy()
+        pkt.set_transmit(
+            self.subtype,
+            self.cmndseqnbr,
+            self.id_combined,
+            self.unitcode,
+            0x00
+        )
+        self.cmndseqnbr = (self.cmndseqnbr + 1) % 5
+        transport.send(pkt.data)
+
+    def send_short_down(self, transport):
+        """ Send an 'short down' command using the given transport """
+        _LOGGER.debug("Sending RFY short down")
+        pkt = lowlevel.Rfy()
+        pkt.set_transmit(
+            self.subtype,
+            self.cmndseqnbr,
+            self.id_combined,
+            self.unitcode,
+            0x10
+        )
+        self.cmndseqnbr = (self.cmndseqnbr + 1) % 5
+        transport.send(pkt.data)
+
+    def send_short_up(self, transport):
+        """ Send an 'short up' command using the given transport """
+        _LOGGER.debug("Sending RFY short up")
+        pkt = lowlevel.Rfy()
+        pkt.set_transmit(
+            self.subtype,
+            self.cmndseqnbr,
+            self.id_combined,
+            self.unitcode,
+            0x0F
+        )
+        self.cmndseqnbr = (self.cmndseqnbr + 1) % 5
+        transport.send(pkt.data)
+
+    def send_long_down(self, transport):
+        """ Send an 'long down' command using the given transport """
+        _LOGGER.debug("Sending RFY long down")
+        pkt = lowlevel.Rfy()
+        pkt.set_transmit(
+            self.subtype,
+            self.cmndseqnbr,
+            self.id_combined,
+            self.unitcode,
+            0x12
+        )
+        self.cmndseqnbr = (self.cmndseqnbr + 1) % 5
+        transport.send(pkt.data)
+
+    def send_long_up(self, transport):
+        """ Send an 'long up' command using the given transport """
+        _LOGGER.debug("Sending RFY long up")
+        pkt = lowlevel.Rfy()
+        pkt.set_transmit(
+            self.subtype,
+            self.cmndseqnbr,
+            self.id_combined,
+            self.unitcode,
+            0x11
+        )
+        self.cmndseqnbr = (self.cmndseqnbr + 1) % 5
+        transport.send(pkt.data)

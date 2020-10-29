@@ -22,6 +22,11 @@ from .venetiancover import VenetianCover
 _LOGGER = logging.getLogger(__name__)
 
 
+def supported(event):
+    """Return whether an event supports cover."""
+    return event.device.known_to_be_rollershutter
+
+
 async def async_setup_entry(
     hass,
     config_entry,
@@ -30,9 +35,6 @@ async def async_setup_entry(
     """Set up config entry."""
     discovery_info = config_entry.data
     device_ids = set()
-
-    def supported(event):
-        return event.device.known_to_be_rollershutter
 
     entities = []
     for packet_id, entity_info in discovery_info[CONF_DEVICES].items():
@@ -82,8 +84,7 @@ async def async_setup_entry(
 
     # Subscribe to main RFXtrx events
     if discovery_info[CONF_AUTOMATIC_ADD]:
-        hass.helpers.dispatcher.async_dispatcher_connect(
-            SIGNAL_EVENT, cover_update)
+        hass.helpers.dispatcher.async_dispatcher_connect(SIGNAL_EVENT, cover_update)
 
 
 class RfxtrxCover(RfxtrxCommandEntity, CoverEntity):

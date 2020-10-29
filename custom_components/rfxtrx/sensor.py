@@ -123,14 +123,12 @@ async def async_setup_entry(
                 "".join(f"{x:02x}" for x in event.data),
             )
 
-            entity = RfxtrxSensor(event.device, device_id,
-                                  data_type, event=event)
+            entity = RfxtrxSensor(event.device, device_id, data_type, event=event)
             async_add_entities([entity])
 
     # Subscribe to main RFXtrx events
     if discovery_info[CONF_AUTOMATIC_ADD]:
-        hass.helpers.dispatcher.async_dispatcher_connect(
-            SIGNAL_EVENT, sensor_update)
+        hass.helpers.dispatcher.async_dispatcher_connect(SIGNAL_EVENT, sensor_update)
 
 
 class RfxtrxSensor(RfxtrxEntity):

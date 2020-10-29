@@ -21,25 +21,25 @@
 This module provides the base implementation for pyRFXtrx
 """
 # pylint: disable=R0903, invalid-name
-from __future__ import print_function
 
 import glob
 import socket
 import threading
 import time
+import logging
+
 from time import sleep
 
 import serial
 
 from . import lowlevel
 
-import logging
 _LOGGER = logging.getLogger(__name__)
+
 
 ###############################################################################
 # RFXtrxDevice class
 ###############################################################################
-
 
 class RFXtrxDevice:
     """ Superclass for all devices """
@@ -70,9 +70,8 @@ class RFXtrxDevice:
 
 class RollerTrolDevice(RFXtrxDevice):
     """ Concrete class for a roller device """
-
     def __init__(self, pkt):
-        super(RollerTrolDevice, self).__init__(pkt)
+        super().__init__(pkt)
         if isinstance(pkt, lowlevel.RollerTrol):
             self.known_to_be_rollershutter = True
             self.id_combined = pkt.id_combined
@@ -121,9 +120,8 @@ class RollerTrolDevice(RFXtrxDevice):
 
 class RfyDevice(RFXtrxDevice):
     """ Concrete class for a roller device """
-
     def __init__(self, pkt):
-        super(RfyDevice, self).__init__(pkt)
+        super().__init__(pkt)
         if isinstance(pkt, lowlevel.Rfy):
             self.known_to_be_rollershutter = True
             self.id_combined = pkt.id_combined
@@ -132,7 +130,6 @@ class RfyDevice(RFXtrxDevice):
 
     def send_close(self, transport):
         """ Send a 'Close' command using the given transport """
-        _LOGGER.debug("Sending RFY close")
         pkt = lowlevel.Rfy()
         pkt.set_transmit(
             self.subtype,
@@ -146,7 +143,6 @@ class RfyDevice(RFXtrxDevice):
 
     def send_open(self, transport):
         """ Send an 'Open' command using the given transport """
-        _LOGGER.debug("Sending RFY open")
         pkt = lowlevel.Rfy()
         pkt.set_transmit(
             self.subtype,
@@ -160,7 +156,6 @@ class RfyDevice(RFXtrxDevice):
 
     def send_stop(self, transport):
         """ Send a 'Stop' command using the given transport """
-        _LOGGER.debug("Sending RFY stop")
         pkt = lowlevel.Rfy()
         pkt.set_transmit(
             self.subtype,
@@ -204,7 +199,7 @@ class LightingDevice(RFXtrxDevice):
 
     # pylint: disable=too-many-instance-attributes
     def __init__(self, pkt):
-        super(LightingDevice, self).__init__(pkt)
+        super().__init__(pkt)
         if isinstance(pkt, lowlevel.Lighting1):
             self.housecode = pkt.housecode
             self.unitcode = pkt.unitcode
@@ -343,6 +338,20 @@ class LightingDevice(RFXtrxDevice):
             raise ValueError("Unsupported packettype")
 
 
+class ChimeDevice(RFXtrxDevice):
+    """ Concrete class for a control device """
+    def __init__(self, pkt):
+        super().__init__(pkt)
+        self.id1 = pkt.id1
+        self.id2 = pkt.id2
+
+    def send_chime(self, transport, sound):
+        """Trigger a chime sound on device."""
+        pkt = lowlevel.Chime()
+        pkt.set_transmit(self.subtype, 0, self.id1, self.id2, sound)
+        transport.send(pkt.data)
+
+
 ###############################################################################
 # get_devide method
 ###############################################################################
@@ -375,6 +384,10 @@ def get_device(packettype, subtype, id_string):
         pkt = lowlevel.Lighting6()
         pkt.parse_id(subtype, id_string)
         return LightingDevice(pkt)
+    if packettype == 0x16:  # Chime
+        pkt = lowlevel.Chime()
+        pkt.parse_id(subtype, id_string)
+        return ChimeDevice(pkt)
     if packettype == 0x19:  # RollerTrol
         pkt = lowlevel.RollerTrol()
         pkt.parse_id(subtype, id_string)
@@ -408,7 +421,7 @@ class SensorEvent(RFXtrxEvent):
     def __init__(self, pkt):
         #  pylint: disable=too-many-branches, too-many-statements
         device = RFXtrxDevice(pkt)
-        super(SensorEvent, self).__init__(device)
+        super().__init__(device)
 
         self.values = {}
         self.pkt = pkt
@@ -438,8 +451,10 @@ class SensorEvent(RFXtrxEvent):
             self.values['Wind direction'] = pkt.direction
             self.values['Wind average speed'] = pkt.average_speed
             self.values['Wind gust'] = pkt.gust
-            self.values['Temperature'] = pkt.temperature
-            self.values['Chill'] = pkt.chill
+            if pkt.temperature is not None:
+                self.values['Temperature'] = pkt.temperature
+            if pkt.chill is not None:
+                self.values['Chill'] = pkt.chill
         if isinstance(pkt, lowlevel.UV):
             self.values['UV'] = pkt.uvi
         if isinstance(pkt, lowlevel.Energy):
@@ -466,8 +481,6 @@ class SensorEvent(RFXtrxEvent):
             self.values['Current'] = pkt.currentamps
             self.values['Energy usage'] = pkt.currentwatt
             self.values['Total usage'] = pkt.totalwatthours
-        if isinstance(pkt, lowlevel.Chime):
-            self.values['Sound'] = pkt.sound
         if isinstance(pkt, lowlevel.Security1):
             self.values['Sensor Status'] = pkt.security1_status_string
         if not isinstance(pkt, (lowlevel.Energy5, lowlevel.RfxMeter)):
@@ -495,11 +508,12 @@ class ControlEvent(RFXtrxEvent):
         elif isinstance(pkt, lowlevel.RollerTrol):
             device = RollerTrolDevice(pkt)
         elif isinstance(pkt, lowlevel.Rfy):
-            #device = RfyDevice(pkt)
             device = VenetianRfyDevice(pkt)
+        elif isinstance(pkt, lowlevel.Chime):
+            device = ChimeDevice(pkt)
         else:
             device = RFXtrxDevice(pkt)
-        super(ControlEvent, self).__init__(device)
+        super().__init__(device)
 
         self.values = {}
         self.values['Command'] = pkt.value('cmnd_string')
@@ -517,6 +531,9 @@ class ControlEvent(RFXtrxEvent):
                 and pkt.cmnd in [0x0d, 0x0e, 0x0f]:
             self.device.known_to_be_rollershutter = True
 
+        if isinstance(pkt, lowlevel.Chime):
+            self.values['Sound'] = pkt.sound
+
         if pkt.rssi is not None:
             self.values['Rssi numeric'] = pkt.rssi
 
@@ -531,7 +548,6 @@ class ControlEvent(RFXtrxEvent):
 
 class StatusEvent(RFXtrxEvent):
     """ Concrete class for status """
-
     def __str__(self):
         return "{0} device=[{1}]".format(
             type(self), self.device)
@@ -544,7 +560,6 @@ class StatusEvent(RFXtrxEvent):
 class _dummySerial:
     """ Dummy class for testing"""
     # pylint: disable=unused-argument
-
     def __init__(self, *args, **kwargs):
         self._read_num = 0
         self._data = {}
@@ -568,6 +583,7 @@ class _dummySerial:
                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00]  # sensor1
         self._data[7] = [0x0a, 0x20, 0x00, 0x00, 0x00,
                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00]  # sensor2
+        self._close_event = threading.Event()
 
     def write(self, *args, **kwargs):
         """ Dummy function for writing"""
@@ -579,6 +595,7 @@ class _dummySerial:
     def read(self, data=None):
         """ Dummy function for reading"""
         if data is not None or self._read_num >= len(self._data):
+            self._close_event.wait(0.1)
             return []
         res = self._data[self._read_num]
         self._read_num = self._read_num + 1
@@ -586,6 +603,7 @@ class _dummySerial:
 
     def close(self):
         """ close connection to rfxtrx device """
+        self._close_event.set()
 
 
 ###############################################################################
@@ -629,8 +647,7 @@ class RFXtrxTransport:
 class PySerialTransport(RFXtrxTransport):
     """ Implementation of a transport using PySerial """
 
-    def __init__(self, port, debug=False):
-        self.debug = debug
+    def __init__(self, port):
         self.port = port
         self.serial = None
         self._run_event = threading.Event()
@@ -666,9 +683,10 @@ class PySerialTransport(RFXtrxTransport):
             pkt = bytearray(data)
             data = self.serial.read(pkt[0])
             pkt.extend(bytearray(data))
-            if self.debug:
-                print("RFXTRX: Recv: " +
-                      " ".join("0x{0:02x}".format(x) for x in pkt))
+            _LOGGER.debug(
+                "Recv: %s",
+                " ".join("0x{0:02x}".format(x) for x in pkt)
+            )
             return self.parse(pkt)
 
     def send(self, data):
@@ -679,9 +697,10 @@ class PySerialTransport(RFXtrxTransport):
             pkt = bytearray(data)
         else:
             raise ValueError("Invalid type")
-        if self.debug:
-            print("RFXTRX: Send: " +
-                  " ".join("0x{0:02x}".format(x) for x in pkt))
+        _LOGGER.debug(
+            "Send: %s",
+            " ".join("0x{0:02x}".format(x) for x in pkt)
+        )
         self.serial.write(pkt)
 
     def reset(self):
@@ -704,8 +723,7 @@ class PySerialTransport(RFXtrxTransport):
 class PyNetworkTransport(RFXtrxTransport):
     """ Implementation of a transport using sockets """
 
-    def __init__(self, hostport, debug=False):
-        self.debug = debug
+    def __init__(self, hostport):
         self.hostport = hostport    # must be a (host, port) tuple
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._run_event = threading.Event()
@@ -716,9 +734,9 @@ class PyNetworkTransport(RFXtrxTransport):
         """ Open a socket connection """
         try:
             self.sock.connect(self.hostport)
-            print("RFXTRX: Connected to network socket")
+            _LOGGER.info("Connected to network socket")
         except socket.error:
-            print('RFXTRX: Failed to create socket, check host port config')
+            _LOGGER.error('Failed to create socket, check host port config')
             # This may throw exception for use by caller:
             self.sock.connect(self.hostport)
 
@@ -740,9 +758,10 @@ class PyNetworkTransport(RFXtrxTransport):
             while len(pkt) < pkt[0]:
                 data = self.sock.recv(pkt[0])
                 pkt.extend(bytearray(data))
-            if self.debug:
-                print("RFXTRX: Recv: " +
-                      " ".join("0x{0:02x}".format(x) for x in pkt))
+            _LOGGER.debug(
+                "Recv: %s",
+                " ".join("0x{0:02x}".format(x) for x in pkt)
+            )
             return self.parse(pkt)
 
     def send(self, data):
@@ -753,9 +772,10 @@ class PyNetworkTransport(RFXtrxTransport):
             pkt = bytearray(data)
         else:
             raise ValueError("Invalid type")
-        if self.debug:
-            print("RFXTRX: Send: " +
-                  " ".join("0x{0:02x}".format(x) for x in pkt))
+        _LOGGER.debug(
+            "Send: %s",
+            " ".join("0x{0:02x}".format(x) for x in pkt)
+        )
         self.sock.send(pkt)
 
     def reset(self):
@@ -773,40 +793,45 @@ class PyNetworkTransport(RFXtrxTransport):
 class DummyTransport(RFXtrxTransport):
     """ Dummy transport for testing purposes """
 
-    def __init__(self, device="", debug=True):
+    def __init__(self, device=""):
         self.device = device
-        self.debug = debug
+        self._close_event = threading.Event()
 
     def receive(self, data=None):
         """ Emulate a receive by parsing the given data """
         if data is None:
+            self._close_event.wait(0.1)
             return None
         pkt = bytearray(data)
-        if self.debug:
-            print("RFXTRX: Recv: " +
-                  " ".join("0x{0:02x}".format(x) for x in pkt))
+        _LOGGER.debug(
+            "Recv: %s",
+            " ".join("0x{0:02x}".format(x) for x in pkt)
+        )
         return self.parse(pkt)
 
     def receive_blocking(self, data=None):
         """ Emulate a receive by parsing the given data """
         return self.receive(data)
 
-    def send(self, data):
+    def send(self, data):  # pylint: disable=R0201
         """ Emulate a send by doing nothing (except printing debug info if
             requested) """
         pkt = bytearray(data)
-        if self.debug:
-            print("RFXTRX: Send: " +
-                  " ".join("0x{0:02x}".format(x) for x in pkt))
+        _LOGGER.debug(
+            "Send: %s",
+            " ".join("0x{0:02x}".format(x) for x in pkt)
+        )
+
+    def close(self):
+        """Close."""
+        self._close_event.set()
 
 
 class DummyTransport2(PySerialTransport):
     """ Dummy transport for testing purposes """
     #  pylint: disable=super-init-not-called
-
-    def __init__(self, device="", debug=True):
+    def __init__(self, device=""):
         self.serial = _dummySerial(device, 38400, timeout=0.1)
-        self.debug = debug
         self._run_event = threading.Event()
         self._run_event.set()
 
@@ -816,22 +841,20 @@ class Connect:
     Has methods for sensors.
     """
     #  pylint: disable=too-many-instance-attributes, too-many-arguments
-
-    def __init__(self, device, event_callback=None, debug=False,
+    def __init__(self, device, event_callback=None,
                  transport_protocol=PySerialTransport,
                  modes=None):
         self._run_event = threading.Event()
-        self._run_event.set()
         self._sensors = {}
         self._status = None
         self._modes = modes
-        self._debug = debug
         self.event_callback = event_callback
 
-        self.transport = transport_protocol(device, debug)
+        self.transport = transport_protocol(device)
         self._thread = threading.Thread(target=self._connect)
         self._thread.setDaemon(True)
         self._thread.start()
+        self._run_event.wait()
 
     def _connect(self):
         """Connect """
@@ -842,10 +865,14 @@ class Connect:
             self.set_recmodes(self._modes)
             self._status = self.send_get_status()
 
-        if self._debug:
-            print("RFXTRX: ", self._status.device)
+        if self._status:
+            _LOGGER.debug(
+                "Status: %s", self._status.device
+            )
 
         self.send_start()
+
+        self._run_event.set()
 
         while self._run_event.is_set():
             event = self.transport.receive_blocking()
@@ -903,9 +930,7 @@ class Connect:
 
 class Core(Connect):
     """ The main class for rfxcom-py. Has changed name to Connect """
-
 # ************************************************************************************************************
-
 
 class VenetianRfyDevice(RfyDevice):
     """ Concrete class for a Somfy venetian blind device """

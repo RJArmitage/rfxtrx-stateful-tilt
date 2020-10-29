@@ -32,6 +32,7 @@ TILT_POS_HOME = 50
 TILT_POS_CLOSED = 0
 BLIND_POS_OPEN = 100
 BLIND_POS_STOPPED = 50
+BLIND_POS_TILTED = 1
 BLIND_POS_CLOSED = 0
 
 COMMAND_STOP = 0x00
@@ -114,7 +115,10 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
         """Return the current_cover_position property."""
         _LOGGER.debug(
             "Returned current_cover_position attribute = " + str(self._position))
-        return self._position
+        if self._position == BLIND_POS_CLOSED and self._tilt_position != TILT_POS_CLOSED:
+            return 1
+        else:
+            return self._position
 
     @property
     def is_opening(self):

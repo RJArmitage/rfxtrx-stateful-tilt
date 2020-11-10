@@ -56,7 +56,7 @@
           "data_bit": "Number of data bits",
           "command_on": "Data bits value for command on",
           "command_off": "Data bits value for command off",
-          "signal_repetitions": "Number of signal repetitions",
+          "signal_repetitions": "AA=open secs,BB=close secs,CC=my-pos steps,D=my-pos sync(0/1)",
           "replace_device": "Select device to replace"
         },
         "title": "Configure device options"

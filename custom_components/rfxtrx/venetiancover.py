@@ -29,9 +29,11 @@ from homeassistant.core import callback
 
 TILT_POS_OPEN = 100
 TILT_POS_HOME = 50
+TILT_POS_STOPPED = 25
 TILT_POS_CLOSED = 0
 BLIND_POS_OPEN = 100
 BLIND_POS_STOPPED = 50
+BLIND_POS_WILLOPEN = 75
 BLIND_POS_TILTED = 1
 BLIND_POS_CLOSED = 0
 
@@ -99,26 +101,28 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
 
     @ property
     def available(self) -> bool:
-        """Return true if light switch is on."""
+        """Return true if device is available - not sure what makes it unavailable."""
         _LOGGER.debug("Returned available attribute = " + str(self._available))
         return self._available
 
     @ property
     def current_cover_tilt_position(self):
-        """Return the brightness of this light between 0..255."""
+        """Return the current tilt position property."""
         _LOGGER.debug(
             "Returned current_cover_tilt_position attribute = " + str(self._tilt_position))
         return self._tilt_position
 
     @property
     def current_cover_position(self):
-        """Return the current_cover_position property."""
+        """Return the current cover position property."""
         _LOGGER.debug(
             "Returned current_cover_position attribute = " + str(self._position))
         if self._position == BLIND_POS_CLOSED and self._tilt_position != TILT_POS_CLOSED:
-            return 1
-        else:
+            return BLIND_POS_TILTED
+        elif self._position == BLIND_POS_CLOSED or self._position == BLIND_POS_OPEN:
             return self._position
+        else:
+            return BLIND_POS_STOPPED
 
     @property
     def is_opening(self):
@@ -129,14 +133,14 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
 
     @property
     def is_closing(self):
-        """Return the is_closing of the light."""
+        """Return the is_closing property."""
         _LOGGER.debug("Returned is_closing attribute = " +
                       str(self._state == STATE_CLOSING))
         return self._state == STATE_CLOSING
 
     @property
     def is_closed(self):
-        """Return color is_closed min mireds."""
+        """Return the is_closed property."""
         _LOGGER.debug("Returned is_closed attribute = " +
                       str(self._state == STATE_CLOSED))
         return self._state == STATE_CLOSED
@@ -167,7 +171,7 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
     # my position. If the blind is in motion then is ignored.
 
     async def async_open_cover(self, **kwargs):
-        """Open the cover."""
+        """Open the cover by selecting the my position."""
         _LOGGER.debug("Invoked async_open_cover")
 
         if self._state == STATE_OPENING or self._state == STATE_CLOSING:
@@ -180,7 +184,7 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
     # that we can be sure the blind is closed.
 
     async def async_close_cover(self, **kwargs):
-        """Close cover."""
+        """Close the cover."""
         _LOGGER.debug("Invoked async_close_cover")
 
         if self._state == STATE_OPENING or self._state == STATE_CLOSING:
@@ -195,7 +199,8 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                 _LOGGER.info("Closing blind with a delay...")
                 self._position = BLIND_POS_STOPPED
                 self._tilt_position = TILT_POS_CLOSED
-                self.schedule_update_ha_state(True)
+                self.async_write_ha_state()
+                # self.schedule_update_ha_state(True)
             else:
                 _LOGGER.info("Closing blind with no delay...")
 
@@ -216,7 +221,8 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                 self._position = BLIND_POS_CLOSED
                 self._tilt_position = TILT_POS_CLOSED
                 self._step = 0
-                self.schedule_update_ha_state(True)
+                self.async_write_ha_state()
+                # self.schedule_update_ha_state(True)
             else:
                 _LOGGER.info(
                     "Finished closing blind - blind is not closing so not setting to closed")
@@ -258,17 +264,21 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
             position = kwargs[ATTR_POSITION]
             if position < BLIND_POS_STOPPED:
                 _LOGGER.debug(
-                    "Position is before mid state - will close blind")
+                    "Requested position is before mid state - will close blind...")
                 await self.async_close_cover(**kwargs)
+            elif position < BLIND_POS_WILLOPEN:
+                _LOGGER.debug(
+                    "Requested position is before open state - will select my position...")
+                await self.async_set_cover_my_position(**kwargs)
             else:
                 _LOGGER.info(
-                    "Position is after mid state - will open with a delay...")
+                    "Requested position is after open state - will open with a delay...")
                 self._state = STATE_OPENING
                 self._position = BLIND_POS_STOPPED
                 self._tilt_position = TILT_POS_CLOSED
                 self._step = 0
+                self.async_write_ha_state()
                 # self.schedule_update_ha_state(True)
-                self.schedule_update_ha_state(True)
 
                 # Open blind
                 await self._async_send(self._device.send_open)
@@ -286,7 +296,8 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                     self._position = BLIND_POS_OPEN
                     self._tilt_position = TILT_POS_OPEN
                     self._step = 0
-                    self.schedule_update_ha_state(True)
+                    self.async_write_ha_state()
+                    # self.schedule_update_ha_state(True)
                 else:
                     _LOGGER.info(
                         "Finished opening blind - blind is not opening so not setting to open")
@@ -315,7 +326,7 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
             _LOGGER.debug("Tilting by closing blind...")
             await self.async_close_cover(**kwargs)
 
-    async def async_set_cover_tilt_position(self, **kwargs):
+    async def async_set_cover_tilt_to_position(self):
         """Move the cover tilt to a specific position."""
         _LOGGER.debug("Invoked async_set_cover_tilt_position")
 
@@ -378,7 +389,8 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                         else:
                             await self._async_send(self._device.send_short_down)
 
-                    self.schedule_update_ha_state(True)
+                    self.async_write_ha_state()
+                    # self.schedule_update_ha_state(True)
 
     async def async_set_cover_my_position(self, **kwargs):
         """Move the cover tilt to a preset position."""
@@ -394,7 +406,8 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                 self._state = STATE_CLOSING
                 self._position = BLIND_POS_STOPPED
                 self._tilt_position = TILT_POS_CLOSED
-                self.schedule_update_ha_state(True)
+                self.async_write_ha_state()
+                # self.schedule_update_ha_state(True)
             else:
                 _LOGGER.info("Setting my position with no delay...")
 
@@ -413,7 +426,8 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                     self._position = BLIND_POS_CLOSED
                     self._tilt_position = TILT_POS_HOME
                     self._step = self._blindMySteps
-                    self.schedule_update_ha_state(True)
+                    self.async_write_ha_state()
+                    # self.schedule_update_ha_state(True)
                 else:
                     _LOGGER.info(
                         "Finished setting my position - blind is not closing so not setting to closed")
@@ -422,7 +436,8 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
                 self._position = BLIND_POS_CLOSED
                 self._tilt_position = TILT_POS_HOME
                 self._step = self._blindMySteps
-                self.schedule_update_ha_state(True)
+                self.async_write_ha_state()
+                # self.schedule_update_ha_state(True)
 
     async def async_update(self):
         """Query the switch in this light switch and determine the state."""

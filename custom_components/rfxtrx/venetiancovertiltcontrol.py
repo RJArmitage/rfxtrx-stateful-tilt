@@ -53,7 +53,7 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_NAME = "Blinds Control"
 
 
-class VenetianCover(RfxtrxCommandEntity, CoverEntity):
+class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
     # class VenetianCover(CoverEntity):
     """Representation of a RFXtrx cover."""
 
@@ -61,7 +61,7 @@ class VenetianCover(RfxtrxCommandEntity, CoverEntity):
         """Initialzie a switch or light device."""
         super().__init__(device, device_id, 1, event)
 
-        _LOGGER.info("Creating venetian cover, signal_repetitions param=",
+        _LOGGER.info("Creating venetian cover with tilt control, signal_repetitions param=",
                      str(signal_repetitions))
 
         if signal_repetitions < 1000:

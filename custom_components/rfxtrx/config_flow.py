@@ -2,7 +2,7 @@
 import copy
 import os
 
-from . import RFXtrx as rfxtrxmod
+import RFXtrx as rfxtrxmod
 import serial
 import serial.tools.list_ports
 import voluptuous as vol
@@ -360,13 +360,17 @@ class OptionsFlow(config_entries.OptionsFlow):
         """Check if device can be replaced with selected device."""
         device_data = self._get_device_data(entry_id)
         event_code = device_data[CONF_EVENT_CODE]
-        rfx_obj = get_rfx_object(event_code)
-        if (
-            rfx_obj.device.packettype == self._selected_device_object.device.packettype
-            and rfx_obj.device.subtype == self._selected_device_object.device.subtype
-            and self._selected_device_event_code != event_code
-        ):
-            return True
+
+        if event_code is not None:
+            rfx_obj = get_rfx_object(event_code)
+            if (
+                rfx_obj.device.packettype
+                == self._selected_device_object.device.packettype
+                and rfx_obj.device.subtype
+                == self._selected_device_object.device.subtype
+                and self._selected_device_event_code != event_code
+            ):
+                return True
 
         return False
 

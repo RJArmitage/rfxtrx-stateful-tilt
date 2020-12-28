@@ -6,19 +6,15 @@ from homeassistant.const import CONF_DEVICES, STATE_OPEN
 from homeassistant.core import callback
 
 from . import (
-    CONF_AUTOMATIC_ADD,
     CONF_DATA_BITS,
     CONF_SIGNAL_REPETITIONS,
     DEFAULT_SIGNAL_REPETITIONS,
-    SIGNAL_EVENT,
     RfxtrxCommandEntity,
+    connect_auto_add,
     get_device_id,
     get_rfx_object,
 )
 from .const import COMMAND_OFF_LIST, COMMAND_ON_LIST
-
-from .venetiancovertiltsimulate import VenetianCoverTiltSimulate
-from .venetiancovertiltcontrol import VenetianCoverTiltControl
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +49,7 @@ async def async_setup_entry(
             continue
         device_ids.add(device_id)
 
-        entity = VenetianCoverTiltSimulate(
+        entity = RfxtrxCover(
             event.device, device_id, entity_info[CONF_SIGNAL_REPETITIONS]
         )
         entities.append(entity)
@@ -78,14 +74,13 @@ async def async_setup_entry(
             "".join(f"{x:02x}" for x in event.data),
         )
 
-        entity = VenetianCoverTiltSimulate(
+        entity = RfxtrxCover(
             event.device, device_id, DEFAULT_SIGNAL_REPETITIONS, event=event
         )
         async_add_entities([entity])
 
     # Subscribe to main RFXtrx events
-    if discovery_info[CONF_AUTOMATIC_ADD]:
-        hass.helpers.dispatcher.async_dispatcher_connect(SIGNAL_EVENT, cover_update)
+    connect_auto_add(hass, discovery_info, cover_update)
 
 
 class RfxtrxCover(RfxtrxCommandEntity, CoverEntity):

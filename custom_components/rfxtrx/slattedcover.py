@@ -1,4 +1,5 @@
 """Light support for switch entities."""
+from custom_components.save.venetiancovertiltsimulate import TILT_POS_CLOSED, TILT_POS_OPEN
 import logging
 import asyncio
 from typing import Any, Callable, Optional, Sequence, cast
@@ -27,23 +28,18 @@ from homeassistant.const import (
 
 from homeassistant.core import callback
 
-TILT_POS_OPEN = 100
-TILT_POS_HOME = 50
-TILT_POS_STOPPED = 25
-TILT_POS_CLOSED = 0
+# Values returned for blind position in various states
 BLIND_POS_OPEN = 100
 BLIND_POS_STOPPED = 50
 BLIND_POS_WILLOPEN = 75
 BLIND_POS_TILTED = 1
 BLIND_POS_CLOSED = 0
 
-COMMAND_STOP = 0x00
-COMMAND_UP = 0x01
-COMMAND_DOWN = 0x03
-COMMAND_SHORT_UP = 0x0F
-COMMAND_SHORT_DOWN = 0x10
-COMMAND_LONG_UP = 0x11
-COMMAND_LONG_DOWN = 0x12
+# Values returned for tilt position in various states
+TILT_POS_BLIND_OPEN = 100
+TILT_POS_MID = 50
+TILT_POS_STOPPED = 25
+TILT_POS_BLIND_CLOSED = 0
 
 
 # mypy: allow-untyped-calls, allow-untyped-defs, no-check-untyped-defs
@@ -53,15 +49,31 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_NAME = "Blinds Control"
 
 
-class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
+# Represents a cover entity that has slats - either vertical or horizontal. Thios differs from a cover in that:
+# - Opening the blind tilts the slats to allow light. Not moving the blind out of the window
+# - Closing the blind requires the blind to be fully lowered into the window and the slats to be in a tilted position
+#
+# Properties:
+#   Config:
+#     _blindMaxSteps - number of steps to tilt the blind from fully tilted to the mid position
+#     _blindMidSteps - number of steps to tilt the blind from fully tilted to the mid position
+#     _supportmidCommand - Boolean - TRUE if the blind has an explicit command for the mid position
+#     _syncmidPos - boolean - TRUE if we should send a "mid" position command each time we cross the mid position
+#     _blindCloseSecs - number of seconds to wait for the blind to fully close from fully open position
+#     _blindOpenSecs - number of seconds to wait for the blind to fully open from fully closed position
+#   State:
+#     _blind_position - reported position of the blind
+#     _tilt_step - step posiotion of the tilt - related to the _tilt_position
+#     _state - what the blind is curfrently doing - STATE_OPEN/STATE_OPENING/STATE_CLOSED/STATE_CLOSING
+#
+class SlattedCover(RfxtrxCommandEntity, CoverEntity):
     # class VenetianCover(CoverEntity):
     """Representation of a RFXtrx cover."""
 
     def __init__(self, device, device_id, signal_repetitions, event=None):
-        """Initialzie a switch or light device."""
         super().__init__(device, device_id, 1, event)
 
-        _LOGGER.info("Creating venetian cover with tilt control, signal_repetitions param=",
+        _LOGGER.info("Creating slatted cover with tilt control, signal_repetitions param=",
                      str(signal_repetitions))
 
         if signal_repetitions < 1000:
@@ -69,27 +81,30 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
         else:
             config = signal_repetitions
 
-        config, self._syncMyPos = divmod(config, 10)
-        self._syncMyPos = self._syncMyPos > 0
-        config, self._blindMySteps = divmod(config, 100)
+        config, self._syncmidPos = divmod(config, 10)
+        self._syncmidPos = self._syncmidPos > 0
+        config, self._blindMidSteps = divmod(config, 100)
         config, self._blindCloseSecs = divmod(config, 100)
         config, self._blindOpenSecs = divmod(config, 100)
 
-        _LOGGER.info("New Venetian config," +
+        self._blindMaxSteps = int(self._blindMidSteps * 2)
+        self._supportmidCommand = True
+
+        _LOGGER.info("New slatted config," +
                      " config=" + str(signal_repetitions) +
-                     " steps=" + str(self._blindMySteps) +
+                     " midSteps=" + str(self._blindMidSteps) +
+                     " maxSteps=" + str(self._blindMaxSteps) +
                      " openSecs=" + str(self._blindOpenSecs) +
                      " closeSecs=" + str(self._blindCloseSecs) +
-                     " syncMyPos=" + str(self._syncMyPos))
+                     " syncmidPos=" + str(self._syncmidPos))
 
     async def async_added_to_hass(self):
         """Restore device state."""
         _LOGGER.debug("Called async_added_to_hass")
 
         self._available = True
-        self._tilt_position = TILT_POS_OPEN
-        self._position = BLIND_POS_OPEN
-        self._step = self._blindMySteps
+        self._blind_position = BLIND_POS_OPEN
+        self._tilt_step = self._blindMidSteps
         self._state = STATE_OPEN
 
         await super().async_added_to_hass()
@@ -108,42 +123,52 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
     @ property
     def current_cover_tilt_position(self):
         """Return the current tilt position property."""
+        if self._tilt_position == 0:
+            tilt = TILT_POS_CLOSED
+        elif self._tilt_position == self._blindMidSteps:
+            tilt = TILT_POS_MID
+        elif self._tilt_position >= self._blindMaxSteps:
+            tilt = TILT_POS_OPEN
+        else:
+            tilt = TILT_POS_OPEN / self._blindMaxSteps
+
         _LOGGER.debug(
-            "Returned current_cover_tilt_position attribute = " + str(self._tilt_position))
-        return self._tilt_position
+            "Returned current_cover_tilt_position attribute = " + str(tilt))
+        return tilt
 
     @property
     def current_cover_position(self):
         """Return the current cover position property."""
-        _LOGGER.debug(
-            "Returned current_cover_position attribute = " + str(self._position))
-        if self._position == BLIND_POS_CLOSED and self._tilt_position != TILT_POS_CLOSED:
-            return BLIND_POS_TILTED
-        elif self._position == BLIND_POS_CLOSED or self._position == BLIND_POS_OPEN:
-            return self._position
+        if self._blind_position == BLIND_POS_CLOSED and self._tilt_position > 0:
+            position = BLIND_POS_TILTED
+        elif self._blind_position == BLIND_POS_CLOSED or self._blind_position == BLIND_POS_OPEN:
+            position = self._blind_position
         else:
-            return BLIND_POS_STOPPED
+            position = BLIND_POS_STOPPED
+        _LOGGER.debug(
+            "Returned current_cover_position attribute = " + str(position))
+        return position
 
     @property
     def is_opening(self):
         """Return the is_opening property."""
-        _LOGGER.debug("Returned is_opening attribute = " +
-                      str(self._state == STATE_OPENING))
-        return self._state == STATE_OPENING
+        opening = self._state == STATE_OPENING
+        _LOGGER.debug("Returned is_opening attribute = " + str(opening))
+        return opening
 
     @property
     def is_closing(self):
         """Return the is_closing property."""
-        _LOGGER.debug("Returned is_closing attribute = " +
-                      str(self._state == STATE_CLOSING))
-        return self._state == STATE_CLOSING
+        closing = self._state == STATE_CLOSING
+        _LOGGER.debug("Returned is_closing attribute = " + str(closing))
+        return closing
 
     @property
     def is_closed(self):
         """Return the is_closed property."""
-        _LOGGER.debug("Returned is_closed attribute = " +
-                      str(self._state == STATE_CLOSED))
-        return self._state == STATE_CLOSED
+        closed = self._state == STATE_CLOSED
+        _LOGGER.debug("Returned is_closed attribute = " + str(closed))
+        return closed
 
     @property
     def device_class(self):
@@ -168,17 +193,17 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
         return False
 
     # Requests to open the blind. In practice we do not open then blind, we will instead tilt to the
-    # my position. If the blind is in motion then is ignored.
+    # mid position. If the blind is in motion then is ignored.
 
     async def async_open_cover(self, **kwargs):
-        """Open the cover by selecting the my position."""
+        """Open the cover by selecting the mid position."""
         _LOGGER.debug("Invoked async_open_cover")
 
         if self._state == STATE_OPENING or self._state == STATE_CLOSING:
             _LOGGER.debug("Blind is in motion - will ignore request")
         else:
-            _LOGGER.debug("Opening blind by selecting my position...")
-            await self.async_set_cover_my_position(**kwargs)
+            _LOGGER.debug("Opening blind by selecting mid position...")
+            await self._async_set_cover_mid_position()
 
     # Requests to close the blind. If the blind is in motion then is ignored. Otherwise always close the blind so
     # that we can be sure the blind is closed.
@@ -190,24 +215,24 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
         if self._state == STATE_OPENING or self._state == STATE_CLOSING:
             _LOGGER.debug("Blind is in motion - will ignore request")
         else:
-            # Do we need to wait?
-            longOperation = self._state == STATE_OPEN or (
-                self._state == STATE_CLOSED and self._position != BLIND_POS_CLOSED)
+            # We need to wait if either the blind is open or it is closed but not in the closed position
+            isLong = self._state == STATE_OPEN or (
+                self._state == STATE_CLOSED and self._blind_position != BLIND_POS_CLOSED)
 
             self._state = STATE_CLOSING
-            if longOperation:
+            if isLong:
                 _LOGGER.info("Closing blind with a delay...")
-                self._position = BLIND_POS_STOPPED
-                self._tilt_position = TILT_POS_CLOSED
+                self._blind_position = BLIND_POS_STOPPED
+                self._tilt_position = 0
                 self.async_write_ha_state()
                 # self.schedule_update_ha_state(True)
             else:
                 _LOGGER.info("Closing blind with no delay...")
 
             # close blind
-            await self._async_send(self._device.send_close)
+            await self._async_close_blind()
 
-            if longOperation:
+            if isLong:
                 _LOGGER.debug("Waiting blind close secs " +
                               str(self._blindCloseSecs))
                 await asyncio.sleep(self._blindCloseSecs)
@@ -218,9 +243,8 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
                     "Finished closing blind - setting blind to closed")
 
                 self._state = STATE_CLOSED
-                self._position = BLIND_POS_CLOSED
-                self._tilt_position = TILT_POS_CLOSED
-                self._step = 0
+                self._blind_position = BLIND_POS_CLOSED
+                self._tilt_position = 0
                 self.async_write_ha_state()
                 # self.schedule_update_ha_state(True)
             else:
@@ -239,12 +263,11 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
                 "Blind is in motion - stopping blind and marking as partially closed")
 
             # Stop the blind
-            await self._async_send(self._device.send_stop)
+            await self._async_stop_blind()
 
             self._state = STATE_CLOSED
-            self._position = BLIND_POS_STOPPED
-            self._tilt_position = TILT_POS_CLOSED
-            self._step = 0
+            self._blind_position = BLIND_POS_STOPPED
+            self._tilt_position = 0
             self.async_write_ha_state()
         else:
             _LOGGER.debug("Blind is stationary - ignoring the request")
@@ -268,20 +291,19 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
                 await self.async_close_cover(**kwargs)
             elif position < BLIND_POS_WILLOPEN:
                 _LOGGER.debug(
-                    "Requested position is before open state - will select my position...")
-                await self.async_set_cover_my_position(**kwargs)
+                    "Requested position is before open state - will select mid position...")
+                await self._async_set_cover_mid_position(**kwargs)
             else:
                 _LOGGER.info(
                     "Requested position is after open state - will open with a delay...")
                 self._state = STATE_OPENING
-                self._position = BLIND_POS_STOPPED
-                self._tilt_position = TILT_POS_CLOSED
-                self._step = 0
+                self._blind_position = BLIND_POS_STOPPED
+                self._tilt_position = 0
                 self.async_write_ha_state()
                 # self.schedule_update_ha_state(True)
 
                 # Open blind
-                await self._async_send(self._device.send_open)
+                await self._async_open_blind()
 
                 # Wait for blind to open and then set state open
                 _LOGGER.debug("Waiting blind open secs " +
@@ -293,9 +315,8 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
                     _LOGGER.info(
                         "Finished opening blind - setting blind to open")
                     self._state = STATE_OPEN
-                    self._position = BLIND_POS_OPEN
-                    self._tilt_position = TILT_POS_OPEN
-                    self._step = 0
+                    self._blind_position = BLIND_POS_OPEN
+                    self._tilt_position = self._blindMaxSteps
                     self.async_write_ha_state()
                     # self.schedule_update_ha_state(True)
                 else:
@@ -313,8 +334,8 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
         if self._state == STATE_OPENING or self._state == STATE_CLOSING:
             _LOGGER.debug("Blind is in motion - will ignore request")
         else:
-            _LOGGER.debug("Opening blind by selecting my position...")
-            await self.async_set_cover_my_position(**kwargs)
+            _LOGGER.debug("Opening blind by selecting mid position...")
+            await self._async_set_cover_mid_position()
 
     async def async_close_cover_tilt(self, **kwargs):
         """Close the cover tilt."""
@@ -326,93 +347,97 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
             _LOGGER.debug("Tilting by closing blind...")
             await self.async_close_cover(**kwargs)
 
-    async def async_set_cover_tilt_to_position(self):
+    async def async_set_cover_tilt_to_position(self, **kwargs):
         """Move the cover tilt to a specific position."""
         _LOGGER.debug("Invoked async_set_cover_tilt_position")
 
         if self._state == STATE_OPENING or self._state == STATE_CLOSING:
             _LOGGER.debug("Blind is in motion - will ignore request")
         elif self._state == STATE_OPEN:
-            _LOGGER.debug("Blind is open - switching to my position operation")
-            await self.async_set_cover_my_position(**kwargs)
-        elif self._state == STATE_CLOSED and self._position != BLIND_POS_CLOSED:
             _LOGGER.debug(
-                "Blind is partially closed - switching to my position operation")
-            await self.async_set_cover_my_position(**kwargs)
+                "Blind is open - switching to mid position operation")
+            await self._async_set_cover_mid_position()
+        elif self._state == STATE_CLOSED and self._blind_position != BLIND_POS_CLOSED:
+            _LOGGER.debug(
+                "Blind is partially closed - switching to mid position operation")
+            await self._async_set_cover_mid_position()
         else:
             if ATTR_TILT_POSITION in kwargs:
-                self._tilt_position = kwargs[ATTR_TILT_POSITION]
+                tilt_position = kwargs[ATTR_TILT_POSITION]
             else:
-                self._tilt_position = TILT_POS_HOME
+                tilt_position = TILT_POS_MID
 
-            if self._tilt_position == TILT_POS_HOME:
+            if tilt_position == TILT_POS_MID:
                 _LOGGER.debug(
-                    "Mid position requested - switching to my position operation")
-                await self.async_set_cover_my_position(**kwargs)
-            elif self._tilt_position == 0:
+                    "mid position requested - switching to mid position operation")
+                await self._async_set_cover_mid_position(**kwargs)
+            elif tilt_position == 0:
                 _LOGGER.debug(
                     "End position requested - switching to close operation")
                 await self.async_close_cover(**kwargs)
             else:
-                target = round(self._tilt_position / 50 * self._blindMySteps)
-                steps = target - self._step
+                target = round(tilt_position / TILT_POS_MID *
+                               self._blindMidSteps)
+                steps = target - self._tilt_position
 
                 _LOGGER.info(
-                    "Tilting to required position; position=" + str(self._tilt_position) +
+                    "Tilting to required position; position=" + str(tilt_position) +
                     " target=" + str(target) +
-                    " from=" + str(self._step) +
+                    " from=" + str(self._tilt_position) +
                     " steps=" + str(steps))
 
-                if (target == self._blindMySteps):
+                if (target == self._blindMidSteps):
                     _LOGGER.debug(
-                        "Tilt is to mid point - switching to my position operation")
-                    await self.async_set_cover_my_position(**kwargs)
+                        "Tilt is to mid point - switching to mid position operation")
+                    await self._async_set_cover_mid_position()
                 else:
-                    if self._syncMyPos:
-                        if steps < 0 and target < self._blindMySteps and self._step > self._blindMySteps:
-                            steps = steps + (self._step - self._blindMySteps)
+                    if self._syncmidPos:
+                        if steps < 0 and target < self._blindMidSteps and self._tilt_step > self._blindMidSteps:
+                            steps = steps + \
+                                (self._tilt_step - self._blindMidSteps)
                             _LOGGER.info(
-                                "Tilt crosses mid point from high - syncing my position; steps remaining=" + str(steps))
-                            await self._async_send(self._device.send_my)
-                        elif steps > 0 and target > self._blindMySteps and self._step < self._blindMySteps:
-                            steps = steps - (self._blindMySteps - self._step)
+                                "Tilt crosses mid point from high - syncing mid position; steps remaining=" + str(steps))
+                            await self._async_set_cover_mid_position()
+                        elif steps > 0 and target > self._blindMidSteps and self._tilt_step < self._blindMidSteps:
+                            steps = steps - \
+                                (self._blindMidSteps - self._tilt_step)
                             _LOGGER.info(
-                                "Tilt crosses mid point from low - syncing my position; steps remaining=" + str(steps))
-                            await self._async_send(self._device.send_my)
+                                "Tilt crosses mid point from low - syncing mid position; steps remaining=" + str(steps))
+                            await self._async_set_cover_mid_position()
 
-                    self._step = target
+                    self._tilt_step = target
 
                     # Tilt blind
                     for step in range(abs(steps)):
                         if steps > 0:
-                            await self._async_send(self._device.send_short_up)
+                            await self._async_tilt_blind_forward()
                         else:
-                            await self._async_send(self._device.send_short_down)
+                            await self._async_tilt_blind_back()
 
                     self.async_write_ha_state()
                     # self.schedule_update_ha_state(True)
 
-    async def async_set_cover_my_position(self, **kwargs):
+    async def _async_set_cover_mid_position(self):
         """Move the cover tilt to a preset position."""
-        _LOGGER.debug("Invoked async_set_cover_my_position")
+        _LOGGER.debug("Invoked _async_set_cover_mid_position")
         if self._state == STATE_OPENING or self._state == STATE_CLOSING:
             _LOGGER.debug("Blind is in motion - will ignore request")
         else:
             longOperation = self._state == STATE_OPEN or (
-                self._state == STATE_CLOSED and self._position != BLIND_POS_CLOSED)
+                self._state == STATE_CLOSED and self._blind_position != BLIND_POS_CLOSED)
 
             if longOperation:
-                _LOGGER.info("Setting my position with a delay...")
+                _LOGGER.info("Setting mid position with a delay...")
                 self._state = STATE_CLOSING
-                self._position = BLIND_POS_STOPPED
-                self._tilt_position = TILT_POS_CLOSED
+                self._blind_position = BLIND_POS_STOPPED
+                self._tilt_position = 0
                 self.async_write_ha_state()
                 # self.schedule_update_ha_state(True)
             else:
-                _LOGGER.info("Setting my position with no delay...")
+                _LOGGER.info("Setting mid position with no delay...")
 
-            # set my position blind
-            await self._async_send(self._device.send_my)
+            # set mid position blind
+            await self._async_set_cover_mid_position()
 
             if longOperation:
                 _LOGGER.debug("Waiting blind close secs " +
@@ -421,23 +446,23 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
 
                 # If the blind is still opening then we have finished. Otherwise assume we were interrupted
                 if self._state == STATE_CLOSING:
-                    _LOGGER.info("Finished setting my position")
+                    _LOGGER.info("Finished setting mid position")
                     self._state = STATE_CLOSED
-                    self._position = BLIND_POS_CLOSED
-                    self._tilt_position = TILT_POS_HOME
-                    self._step = self._blindMySteps
+                    self._blind_position = BLIND_POS_CLOSED
+                    self._tilt_position = self._blindMidSteps
                     self.async_write_ha_state()
                     # self.schedule_update_ha_state(True)
                 else:
                     _LOGGER.info(
-                        "Finished setting my position - blind is not closing so not setting to closed")
+                        "Finished setting mid position - blind is not closing so not setting to closed")
             else:
-                _LOGGER.info("Finished setting my position")
-                self._position = BLIND_POS_CLOSED
-                self._tilt_position = TILT_POS_HOME
-                self._step = self._blindMySteps
+                _LOGGER.info("Finished setting mid position")
+                self._blind_position = BLIND_POS_CLOSED
+                self._tilt_position = self._blindMidSteps
                 self.async_write_ha_state()
                 # self.schedule_update_ha_state(True)
+
+    # Handle updates from cover device
 
     async def async_update(self):
         """Query the switch in this light switch and determine the state."""
@@ -458,3 +483,26 @@ class VenetianCoverTiltControl(RfxtrxCommandEntity, CoverEntity):
         self._apply_event(event)
 
         self.async_write_ha_state()
+
+    # Implementations for device specific actions
+
+    async def _async_close_blind(self):
+        """Callback to open the blind"""
+        await self._async_send(self._device.send_close)
+
+    async def _async_open_blind(self):
+        """Callback to open the blind"""
+        await self._async_send(self._device.send_open)
+
+    async def _async_stop_blind(self):
+        """Callback to open the blind"""
+        await self._async_send(self._device.send_stop)
+
+    async def _async_tilt_blind_to_mid(self):
+        """Callback to open the blind"""
+
+    async def _async_tilt_blind_forward(self):
+        """Callback to open the blind"""
+
+    async def _async_tilt_blind_back(self):
+        """Callback to open the blind"""

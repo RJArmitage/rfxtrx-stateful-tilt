@@ -1,5 +1,4 @@
 {
-  "title": "Rfxtrx",
   "config": {
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::single_instance_allowed%]",
@@ -56,7 +55,7 @@
           "data_bit": "Number of data bits",
           "command_on": "Data bits value for command on",
           "command_off": "Data bits value for command off",
-          "signal_repetitions": "AA=open secs,BB=close secs,CC=my-pos steps,D=my-pos sync(0/1)",
+          "signal_repetitions": "Number of signal repetitions",
           "replace_device": "Select device to replace"
         },
         "title": "Configure device options"

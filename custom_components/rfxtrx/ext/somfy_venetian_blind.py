@@ -1,6 +1,6 @@
 import logging
 
-from .ext_abs_lifting_tilting_cover import AbstractLiftingTiltingCover
+from .abs_lifting_tilting_cover import AbstractLiftingTiltingCover
 
 _LOGGER = logging.getLogger(__name__)
 

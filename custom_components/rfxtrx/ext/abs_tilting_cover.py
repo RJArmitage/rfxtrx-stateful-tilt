@@ -3,7 +3,7 @@ import logging
 import asyncio
 from typing import Any, Callable, Optional, Sequence, cast
 
-from . import RfxtrxCommandEntity
+from .. import RfxtrxCommandEntity
 
 from homeassistant.components.cover import (
     DEVICE_CLASS_BLIND,

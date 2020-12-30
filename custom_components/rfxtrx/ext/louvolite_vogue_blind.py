@@ -1,6 +1,6 @@
 import logging
 
-from .ext_abs_static_tilting_cover import AbstractStaticTiltingCover
+from .abs_static_tilting_cover import AbstractStaticTiltingCover
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ from homeassistant.components.rfxtrx.config_flow import (
     none_or_int
 )
 
-from .ext_const import (
+from .const import (
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
     DEF_SUPPORTS_MID,

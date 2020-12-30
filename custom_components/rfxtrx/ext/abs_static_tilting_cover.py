@@ -2,8 +2,6 @@
 import logging
 from typing import Any, Callable, Optional, Sequence, cast
 
-from . import RfxtrxCommandEntity
-
 from homeassistant.components.cover import (
     SUPPORT_CLOSE,
     SUPPORT_OPEN,
@@ -17,7 +15,7 @@ from homeassistant.const import (
 
 from homeassistant.core import callback
 
-from .ext_abs_tilting_cover import (
+from .abs_tilting_cover import (
     AbstractTiltingCover,
     TILT_POS_CLOSED_MIN,
     TILT_POS_CLOSED_MAX,

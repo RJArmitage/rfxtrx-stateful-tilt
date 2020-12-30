@@ -30,23 +30,10 @@ from homeassistant.components.rfxtrx.const import (
     DEVICE_PACKET_TYPE_LIGHTING4,
 )
 from homeassistant.components.rfxtrx.config_flow import (
-    none_or_int
+    none_or_int,
 )
 
-from .ext_const import (
-    DEF_CLOSE_SECONDS,
-    DEF_OPEN_SECONDS,
-    DEF_SUPPORTS_MID,
-    DEF_STEPS_MID,
-    DEF_SYNC_MID,
-    CONF_CLOSE_SECONDS,
-    CONF_OPEN_SECONDS,
-    CONF_SUPPORTS_MID,
-    CONF_STEPS_MID,
-    CONF_SYNC_MID
-)
-
-from .ext_config_flow import (
+from .ext.config_flow import(
     update_data_schema,
     update_device_options
 )
@@ -114,16 +101,6 @@ class OptionsFlow(OldOptionsFlow):
                     device[CONF_COMMAND_OFF] = command_off
 
                 update_device_options(device, user_input)
-                # device[CONF_SUPPORTS_MID] = user_input.get(
-                #     CONF_SUPPORTS_MID, DEF_SUPPORTS_MID)
-                # device[CONF_SYNC_MID] = user_input.get(
-                #     CONF_SYNC_MID, DEF_SYNC_MID)
-                # device[CONF_STEPS_MID] = user_input.get(
-                #     CONF_STEPS_MID, DEF_STEPS_MID)
-                # device[CONF_OPEN_SECONDS] = user_input.get(CONF_OPEN_SECONDS,
-                #                                            DEF_OPEN_SECONDS)
-                # device[CONF_CLOSE_SECONDS] = user_input.get(CONF_CLOSE_SECONDS,
-                #                                             DEF_CLOSE_SECONDS)
 
                 self.update_config_data(
                     global_options=self._global_options, devices=devices

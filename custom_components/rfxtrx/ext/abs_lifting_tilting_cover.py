@@ -2,8 +2,6 @@
 import logging
 from typing import Any, Callable, Optional, Sequence, cast
 
-from . import RfxtrxCommandEntity
-
 from homeassistant.components.cover import (
     SUPPORT_CLOSE,
     SUPPORT_OPEN,
@@ -17,7 +15,7 @@ from homeassistant.components.cover import (
 
 from homeassistant.core import callback
 
-from .ext_abs_tilting_cover import AbstractTiltingCover
+from .abs_tilting_cover import AbstractTiltingCover
 
 # mypy: allow-untyped-calls, allow-untyped-defs, no-check-untyped-defs
 

@@ -1,7 +1,7 @@
 import logging
 
-from .ext_louvolite_vogue_blind import LouvoliteVogueBlind
-from .ext_somfy_venetian_blind import SomfyVenetianBlind
+from .louvolite_vogue_blind import LouvoliteVogueBlind
+from .somfy_venetian_blind import SomfyVenetianBlind
 
 _LOGGER = logging.getLogger(__name__)
 

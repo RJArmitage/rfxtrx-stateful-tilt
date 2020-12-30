@@ -15,6 +15,7 @@ from . import (
     get_rfx_object,
 )
 from .const import COMMAND_OFF_LIST, COMMAND_ON_LIST
+from .ext import create_cover_entity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,9 +50,11 @@ async def async_setup_entry(
             continue
         device_ids.add(device_id)
 
-        entity = RfxtrxCover(
-            event.device, device_id, entity_info[CONF_SIGNAL_REPETITIONS]
-        )
+        entity = create_cover_entity(event.device, device_id, entity_info)
+        if entity is None:
+            entity = RfxtrxCover(
+                event.device, device_id, entity_info[CONF_SIGNAL_REPETITIONS]
+            )
         entities.append(entity)
 
     async_add_entities(entities)

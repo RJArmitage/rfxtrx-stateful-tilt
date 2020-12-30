@@ -56,7 +56,15 @@
           "command_on": "Data bits value for command on",
           "command_off": "Data bits value for command off",
           "signal_repetitions": "Number of signal repetitions",
-          "replace_device": "Select device to replace"
+          "replace_device": "Select device to replace",
+
+
+
+          "midpoint_supported": "Supports midpoint access",
+          "midpoint_sync": "Sync when crossing midpoint",
+          "midpoint_steps": "Steps to midpoint",
+          "open_seconds": "Open time (secs)",
+          "close_seconds": "Close time (secs)"
         },
         "title": "Configure device options"
       }

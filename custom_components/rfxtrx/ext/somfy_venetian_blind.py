@@ -1,7 +1,14 @@
 import logging
-
-from .abs_lifting_tilting_cover import AbstractLiftingTiltingCover
-
+from homeassistant.components.rfxtrx import (
+    CONF_SIGNAL_REPETITIONS
+)
+from .abs_tilting_cover import AbstractTiltingCover
+from.const import (
+    CONF_CLOSE_SECONDS,
+    CONF_OPEN_SECONDS,
+    CONF_STEPS_MID,
+    CONF_SYNC_MID
+)
 _LOGGER = logging.getLogger(__name__)
 
 DEVICE_TYPE = "Somfy Venetian"
@@ -15,12 +22,20 @@ CMD_135_DEGREES = 0x04
 # Event 071a000001010101
 
 
-class SomfyVenetianBlind(AbstractLiftingTiltingCover):
+class SomfyVenetianBlind(AbstractTiltingCover):
     """Representation of a RFXtrx cover."""
 
     def __init__(self, device, device_id, entity_info, event=None):
         device.type_string = DEVICE_TYPE
-        super().__init__(device, device_id, 1, True, False, 40, 30, event)
+        super().__init__(device, device_id,
+                         entity_info[CONF_SIGNAL_REPETITIONS], event,
+                         entity_info[CONF_STEPS_MID],  # steps to mid point
+                         True,  # Supports mid point
+                         True,  # Supports lift
+                         entity_info[CONF_SYNC_MID],  # Sync on mid point
+                         entity_info[CONF_OPEN_SECONDS],  # Open time
+                         entity_info[CONF_CLOSE_SECONDS]  # Close time
+                         )
 
     async def _async_tilt_blind_to_step(self, steps, target):
         _LOGGER.info("SOMFY VENETIAN TILTING BLIND")

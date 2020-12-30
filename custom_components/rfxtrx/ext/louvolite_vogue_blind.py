@@ -1,6 +1,8 @@
 import logging
-
-from .abs_static_tilting_cover import AbstractStaticTiltingCover
+from homeassistant.components.rfxtrx import (
+    CONF_SIGNAL_REPETITIONS
+)
+from .abs_tilting_cover import AbstractTiltingCover
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -15,12 +17,20 @@ CMD_135_DEGREES = 0x04
 # Event 0919130400A1DB010000
 
 
-class LouvoliteVogueBlind(AbstractStaticTiltingCover):
+class LouvoliteVogueBlind(AbstractTiltingCover):
     """Representation of a RFXtrx cover."""
 
     def __init__(self, device, device_id, entity_info, event=None):
         device.type_string = DEVICE_TYPE
-        super().__init__(device, device_id, 2, True, False, event)
+        super().__init__(device, device_id,
+                         entity_info[CONF_SIGNAL_REPETITIONS], event,
+                         2,  #  2 steps to mid point
+                         True,  # Supports mid point
+                         False,  # Does not support lift
+                         False,  # Does not require sync on mid point
+                         1,  # Dummy opening time
+                         1  # Dummy close time
+                         )
 
     async def _async_tilt_blind_to_step(self, steps, target):
         _LOGGER.info("LOUVOLITE TILTING BLIND")

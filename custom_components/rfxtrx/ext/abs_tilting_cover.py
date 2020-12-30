@@ -56,8 +56,8 @@ DEFAULT_NAME = "Blinds Control"
 #   Config:
 #     _blindMaxSteps - number of steps to tilt the blind from fully tilted to the mid position
 #     _blindMidSteps - number of steps to tilt the blind from fully tilted to the mid position
-#     _supportmidCommand - Boolean - TRUE if the blind has an explicit command for the mid position
-#     _syncmidPos - boolean - TRUE if we should send a "mid" position command each time we cross the mid position
+#     _hasMidCommand - Boolean - TRUE if the blind has an explicit command for the mid position
+#     _syncMidPos - boolean - TRUE if we should send a "mid" position command each time we cross the mid position
 #     _blindCloseSecs - number of seconds to wait for the blind to fully close from fully open position
 #     _blindOpenSecs - number of seconds to wait for the blind to fully open from fully closed position
 #   State:
@@ -66,26 +66,28 @@ DEFAULT_NAME = "Blinds Control"
 #     _state - what the blind is curfrently doing - STATE_OPEN/STATE_OPENING/STATE_CLOSED/STATE_CLOSING
 #
 class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
-    # class VenetianCover(CoverEntity):
-    """Representation of a RFXtrx cover."""
+    """Representation of a RFXtrx cover supporting tilt and, optionally, lift."""
 
-    def __init__(self, device, device_id, midSteps, hasMid, syncMid, openSecs, closeSecs, event):
-        super().__init__(device, device_id, 1, event)
+    def __init__(self, device, device_id, signal_repetitions, event, midSteps, hasMid, hasLift, syncMid, openSecs, closeSecs):
+        super().__init__(device, device_id, signal_repetitions, event)
 
-        self._syncmidPos = syncMid
+        self._syncMidPos = syncMid
+        self._hasMidCommand = hasMid
+        self._hasLift = hasLift
         self._blindMidSteps = midSteps
         self._blindCloseSecs = closeSecs
         self._blindOpenSecs = openSecs
         self._blindMaxSteps = int(self._blindMidSteps * 2)
-        self._supportmidCommand = hasMid
 
-        _LOGGER.info("New slatted cover config," +
+        _LOGGER.info("New tilting cover config," +
+                     " signal_repetitions=" + str(signal_repetitions) +
                      " midSteps=" + str(self._blindMidSteps) +
                      " maxSteps=" + str(self._blindMaxSteps) +
                      " openSecs=" + str(self._blindOpenSecs) +
                      " closeSecs=" + str(self._blindCloseSecs) +
-                     " syncmidPos=" + str(self._syncmidPos))
-        _LOGGER.info("Event " + str(self._event))
+                     " hasLift=" + str(self._hasLift) +
+                     " hasMidCommand=" + str(self._hasMidCommand) +
+                     " syncMidPos=" + str(self._syncMidPos))
 
     async def async_added_to_hass(self):
         """Restore device state."""
@@ -122,7 +124,8 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         """Return true if device is available - not sure what makes it unavailable."""
         return True
 
-    def _current_cover_tilt_position(self):
+    @property
+    def current_cover_tilt_positionx(self):
         """Return the current tilt position property."""
         if self._tilt_position == 0:
             tilt = TILT_POS_CLOSED_MIN
@@ -133,14 +136,6 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         else:
             tilt = self._steps_to_tilt(self._tilt_position)
 
-        _LOGGER.info(
-            "Returned current_cover_tilt_position attribute = " + str(tilt))
-        return tilt
-
-    @property
-    def current_cover_tilt_positionx(self):
-        """Return the current tilt position property."""
-        tilt = self._current_cover_tilt_position()
         _LOGGER.info(
             "Returned current_cover_tilt_position attribute = " + str(tilt))
         return tilt
@@ -400,7 +395,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
                         "Tilt is to mid point - switching to mid position operation")
                     await self._async_set_cover_mid_position()
                 else:
-                    if self._syncmidPos:
+                    if self._syncMidPos:
                         if steps < 0 and target < self._blindMidSteps and self._tilt_position > self._blindMidSteps:
                             steps = steps + \
                                 (self._tilt_position - self._blindMidSteps)

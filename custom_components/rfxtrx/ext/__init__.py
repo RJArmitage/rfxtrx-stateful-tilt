@@ -1,4 +1,8 @@
 import logging
+from homeassistant.components.rfxtrx.cover import RfxtrxCover
+from homeassistant.components.rfxtrx import (
+    CONF_SIGNAL_REPETITIONS
+)
 
 from .louvolite_vogue_blind import LouvoliteVogueBlind
 from .somfy_venetian_blind import SomfyVenetianBlind
@@ -11,11 +15,11 @@ def create_cover_entity(device, device_id, entity_info, event=None):
     _LOGGER.info("Device ID " + str(device_id))
     _LOGGER.info("Info " + str(entity_info))
 
-    # if device_id[0] == '19' and device_id[1] == '13':
-    #     _LOGGER.info("Detected a Louvolite Vogue vertical blind")
-    #     return LouvoliteVogueBlind(device, device_id, entity_info)
-    # elif device_id[0] == '1a':
-    #     _LOGGER.info("Detected a Somfy RFY blind")
-    #     return SomfyVenetianBlind(device, device_id, entity_info)
-
-    return None
+    if device_id[0] == '19' and device_id[1] == '13':
+        _LOGGER.info("Detected a Louvolite Vogue vertical blind")
+        return LouvoliteVogueBlind(device, device_id, entity_info)
+    elif device_id[0] == '1a':
+        _LOGGER.info("Detected a Somfy RFY blind")
+        return SomfyVenetianBlind(device, device_id, entity_info)
+    else:
+        return RfxtrxCover(device, device_id, entity_info[CONF_SIGNAL_REPETITIONS])

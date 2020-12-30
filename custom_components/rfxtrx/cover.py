@@ -5,11 +5,7 @@ from homeassistant.components.rfxtrx.cover import (
     supported,
     RfxtrxCover
 )
-
 from homeassistant.components.rfxtrx import (
-    CONF_AUTOMATIC_ADD,
-    DEFAULT_SIGNAL_REPETITIONS,
-    SIGNAL_EVENT,
     CONF_DATA_BITS,
     CONF_SIGNAL_REPETITIONS,
     get_device_id,
@@ -27,6 +23,8 @@ async def async_setup_entry(
     async_add_entities,
 ):
     """Set up config entry."""
+    _LOGGER.info("Called overridden async_setup_entry")
+
     discovery_info = config_entry.data
     device_ids = set()
 
@@ -52,7 +50,5 @@ async def async_setup_entry(
             event.device, device_id, entity_info[CONF_SIGNAL_REPETITIONS]
         )
         entities.append(entity)
-
-        _LOGGER.error("Created new device via local handler: %s", packet_id)
 
     async_add_entities(entities)

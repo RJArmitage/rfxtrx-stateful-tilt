@@ -1,14 +1,14 @@
 import logging
-from homeassistant.components.rfxtrx import (
-    CONF_SIGNAL_REPETITIONS
-)
+from homeassistant.components.rfxtrx import CONF_SIGNAL_REPETITIONS
+
 from .abs_tilting_cover import AbstractTiltingCover
-from.const import (
+from .const import (
     CONF_CLOSE_SECONDS,
     CONF_OPEN_SECONDS,
     CONF_STEPS_MID,
     CONF_SYNC_MID
 )
+
 _LOGGER = logging.getLogger(__name__)
 
 DEVICE_TYPE = "Somfy Venetian"
@@ -34,17 +34,18 @@ class SomfyVenetianBlind(AbstractTiltingCover):
                          True,  # Supports lift
                          entity_info[CONF_SYNC_MID],  # Sync on mid point
                          entity_info[CONF_OPEN_SECONDS],  # Open time
-                         entity_info[CONF_CLOSE_SECONDS]  # Close time
+                         entity_info[CONF_CLOSE_SECONDS],  # Close time
+                         500  # Ms for each step
                          )
 
     async def _async_tilt_blind_to_step(self, steps, target):
         _LOGGER.info("SOMFY VENETIAN TILTING BLIND")
-        if target == 0:
-            await self._async_send(self._device.send_close)
-        elif target == 1:
-            await self._async_send(self._device.send_stop)
-        elif target == 2:
-            await self._async_send(self._device.send_close)
+        # if target == 0:
+        #     await self._async_send(self._device.send_close)
+        # elif target == 1:
+        #     await self._async_send(self._device.send_stop)
+        # elif target == 2:
+        #     await self._async_send(self._device.send_close)
 
         return target
 
@@ -52,15 +53,15 @@ class SomfyVenetianBlind(AbstractTiltingCover):
     async def _async_close_blind(self):
         """Callback to close the blind"""
         _LOGGER.info("SOMFY VENETIAN CLOSING BLIND")
-        await self._async_send(self._device.send_close)
+        # await self._async_send(self._device.send_close)
 
     # Replace with action to open blind
     async def _async_open_blind(self):
         """Callback to open the blind"""
         _LOGGER.info("SOMFY VENETIAN OPENING BLIND")
-        await self._async_send(self._device.send_open)
+        # await self._async_send(self._device.send_open)
 
     async def _async_tilt_blind_to_mid(self):
         """Callback to tilt the blind to mid"""
         _LOGGER.info("SOMFY VENETIAN TILTING BLIND TO MID")
-        await self._async_send(self._device.send_stop)
+        # await self._async_send(self._device.send_stop)

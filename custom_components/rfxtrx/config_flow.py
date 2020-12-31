@@ -49,7 +49,6 @@ class OptionsFlow(OldOptionsFlow):
         _LOGGER.info("Called async_step_set_device_options function")
 
         errors = {}
-
         if user_input is not None:
             device_id = get_device_id(
                 self._selected_device_object.device,
@@ -147,6 +146,13 @@ class OptionsFlow(OldOptionsFlow):
                 }
             )
 
+        _LOGGER.info("Self " + str(self))
+        _LOGGER.info("_selected_device_object " +
+                     str(self._selected_device_object))
+        _LOGGER.info(
+            "p type" + str(self._selected_device_object.device.packettype))
+        _LOGGER.info(
+            "p subtype" + str(self._selected_device_object.device.subtype))
         update_data_schema(
             data_schema, self._selected_device_object, device_data)
 

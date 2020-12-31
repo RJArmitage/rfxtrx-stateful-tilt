@@ -1,7 +1,6 @@
 import logging
-from homeassistant.components.rfxtrx import (
-    CONF_SIGNAL_REPETITIONS
-)
+from homeassistant.components.rfxtrx import CONF_SIGNAL_REPETITIONS
+
 from .abs_tilting_cover import AbstractTiltingCover
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,7 +28,8 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
                          False,  # Does not support lift
                          False,  # Does not require sync on mid point
                          1,  # Dummy opening time
-                         1  # Dummy close time
+                         1,  # Dummy close time
+                         2000  # Ms for each step
                          )
 
     async def _async_tilt_blind_to_step(self, steps, target):

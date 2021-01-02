@@ -50,6 +50,7 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_NAME = "Blinds Control"
 
 AUTO_STEP_CLICK_SEC = 2
+COMMAND_DEBOUNCE_SEC = 0.5
 
 
 # Represents a cover entity that has slats - either vertical or horizontal. Thios differs from a cover in that:
@@ -105,6 +106,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         self._lastStopTime = time.time()
         self._autoStepActive = False
         self._autoStepDirection = 0
+        self._lastCommandTime = time.time()
 
         await super().async_added_to_hass()
 
@@ -214,7 +216,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs):
         """Open the cover by selecting the mid position."""
-        _LOGGER.debug("Invoked async_open_cover")
+        _LOGGER.info("Invoked async_open_cover")
 
         if self._blind_is_in_motion():
             _LOGGER.debug("Blind is in motion - will ignore request")
@@ -302,6 +304,8 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
 
         if self._blind_is_in_motion():
             _LOGGER.info("Blind is in motion - will ignore request")
+        elif self._ignore_bounce():
+            _LOGGER.info("Duplicate command - will ignore request")
         elif ATTR_POSITION in kwargs:
             position = kwargs[ATTR_POSITION]
             if position < BLIND_POS_STOPPED:
@@ -387,6 +391,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
     async def async_stop_cover_tilt(self, **kwargs):
         """Stop the cover."""
         _LOGGER.info("Invoked async_stop_cover_tilt")
+
         lastStop = self._lastStopTime
         now = time.time()
         self._lastStopTime = now
@@ -404,6 +409,8 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
 
         if self._blind_is_in_motion():
             _LOGGER.info("Blind is in motion - will ignore request")
+        elif self._ignore_bounce():
+            _LOGGER.info("Duplicate command - will ignore request")
         elif self._state == STATE_OPEN:
             _LOGGER.info(
                 "Blind is open - switching to mid position operation")
@@ -448,21 +455,22 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
                 " from=" + str(self._tilt_position) +
                 " steps=" + str(steps))
 
-            if self._syncMidPos and syncMidPos:
-                if steps < 0 and tilt_position < self._blindMidSteps and self._tilt_position > self._blindMidSteps:
-                    steps = steps + \
-                        (self._tilt_position - self._blindMidSteps)
-                    _LOGGER.info(
-                        "Tilt crosses mid point from high - syncing mid position; steps remaining=" + str(steps))
-                    await self._async_set_cover_mid_position()
-                elif steps > 0 and tilt_position > self._blindMidSteps and self._tilt_position < self._blindMidSteps:
-                    steps = steps - \
-                        (self._blindMidSteps - self._tilt_position)
-                    _LOGGER.info(
-                        "Tilt crosses mid point from low - syncing mid position; steps remaining=" + str(steps))
-                    await self._async_set_cover_mid_position()
+            if steps != 0:
+                if self._syncMidPos and syncMidPos:
+                    if steps < 0 and tilt_position < self._blindMidSteps and self._tilt_position > self._blindMidSteps:
+                        steps = steps + \
+                            (self._tilt_position - self._blindMidSteps)
+                        _LOGGER.info(
+                            "Tilt crosses mid point from high - syncing mid position; steps remaining=" + str(steps))
+                        await self._async_set_cover_mid_position()
+                    elif steps > 0 and tilt_position > self._blindMidSteps and self._tilt_position < self._blindMidSteps:
+                        steps = steps - \
+                            (self._blindMidSteps - self._tilt_position)
+                        _LOGGER.info(
+                            "Tilt crosses mid point from low - syncing mid position; steps remaining=" + str(steps))
+                        await self._async_set_cover_mid_position()
+                self._tilt_position = await self._async_tilt_blind_to_step(steps, tilt_position)
 
-            self._tilt_position = await self._async_tilt_blind_to_step(steps, tilt_position)
             self.async_write_ha_state()
 
     async def _async_set_cover_mid_position(self):
@@ -512,6 +520,11 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
                 # self.schedule_update_ha_state(True)
 
     # Helper functions
+
+    def _ignore_bounce(self):
+        last = self._lastCommandTime
+        self._lastCommandTime = time.time()
+        return (self._lastCommandTime - last) <= COMMAND_DEBOUNCE_SEC
 
     def _blind_is_in_motion(self):
         return self._state == STATE_OPENING or self._state == STATE_CLOSING

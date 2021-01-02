@@ -20,11 +20,12 @@ def create_cover_entity(device, device_id, entity_info, event=None):
     _LOGGER.info("Device ID " + str(device_id))
     _LOGGER.info("Info " + str(entity_info))
 
-    if device_id[0] == DEVICE_PACKET_TYPE_BLINDS1 and device_id[1] == DEVICE_PACKET_SUBTYPE_BLINDST19:
+    if int(device_id[0], 16) == DEVICE_PACKET_TYPE_BLINDS1 and int(device_id[1], 16) == DEVICE_PACKET_SUBTYPE_BLINDST19:
         _LOGGER.info("Detected a Louvolite Vogue vertical blind")
         return LouvoliteVogueBlind(device, device_id, entity_info)
-    elif device_id[0] == DEVICE_PACKET_TYPE_RFY:
+    elif int(device_id[0], 16) == DEVICE_PACKET_TYPE_RFY:
         _LOGGER.info("Detected a Somfy RFY blind")
         return SomfyVenetianBlind(device, device_id, entity_info)
     else:
+        _LOGGER.info("Created default cover")
         return RfxtrxCover(device, device_id, entity_info[CONF_SIGNAL_REPETITIONS])

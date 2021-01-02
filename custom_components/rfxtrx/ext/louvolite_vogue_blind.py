@@ -31,6 +31,7 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
                          1,  # Dummy close time
                          2000  # Ms for each step
                          )
+        _LOGGER.info("Create Louvolite Vogue tilting blind " + str(device_id))
 
     async def _async_tilt_blind_to_step(self, steps, target):
         _LOGGER.info("LOUVOLITE TILTING BLIND")

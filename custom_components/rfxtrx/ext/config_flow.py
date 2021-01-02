@@ -9,11 +9,15 @@ from .const import (
     DEF_SUPPORTS_MID,
     DEF_STEPS_MID,
     DEF_SYNC_MID,
+    DEF_TILT_POS1_MS,
+    DEF_TILT_POS2_MS,
     CONF_CLOSE_SECONDS,
     CONF_OPEN_SECONDS,
     CONF_SUPPORTS_MID,
     CONF_STEPS_MID,
     CONF_SYNC_MID,
+    CONF_TILT_POS1_MS,
+    CONF_TILT_POS2_MS,
     DEVICE_PACKET_TYPE_RFY
 )
 
@@ -23,14 +27,16 @@ _LOGGER = logging.getLogger(__name__)
 def update_device_options(device, user_input):
     device[CONF_SUPPORTS_MID] = user_input.get(
         CONF_SUPPORTS_MID, DEF_SUPPORTS_MID)
-    device[CONF_SYNC_MID] = user_input.get(
-        CONF_SYNC_MID, DEF_SYNC_MID)
-    device[CONF_STEPS_MID] = user_input.get(
-        CONF_STEPS_MID, DEF_STEPS_MID)
-    device[CONF_OPEN_SECONDS] = user_input.get(CONF_OPEN_SECONDS,
-                                               DEF_OPEN_SECONDS)
-    device[CONF_CLOSE_SECONDS] = user_input.get(CONF_CLOSE_SECONDS,
-                                                DEF_CLOSE_SECONDS)
+    device[CONF_SYNC_MID] = user_input.get(CONF_SYNC_MID, DEF_SYNC_MID)
+    device[CONF_STEPS_MID] = user_input.get(CONF_STEPS_MID, DEF_STEPS_MID)
+    device[CONF_OPEN_SECONDS] = user_input.get(
+        CONF_OPEN_SECONDS, DEF_OPEN_SECONDS)
+    device[CONF_CLOSE_SECONDS] = user_input.get(
+        CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
+    device[CONF_TILT_POS1_MS] = user_input.get(
+        CONF_TILT_POS1_MS, DEF_TILT_POS1_MS)
+    device[CONF_TILT_POS2_MS] = user_input.get(
+        CONF_TILT_POS2_MS, DEF_TILT_POS2_MS)
 
 
 def update_data_schema(data_schema, device_object, device_data):
@@ -61,6 +67,16 @@ def update_data_schema(data_schema, device_object, device_data):
                         CONF_CLOSE_SECONDS,
                         default=device_data.get(
                             CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS),
+                    ): int,
+                    vol.Optional(
+                        CONF_TILT_POS1_MS,
+                        default=device_data.get(
+                            CONF_TILT_POS1_MS, DEF_TILT_POS1_MS),
+                    ): int,
+                    vol.Optional(
+                        CONF_TILT_POS2_MS,
+                        default=device_data.get(
+                            CONF_TILT_POS2_MS, DEF_TILT_POS2_MS),
                     ): int,
                 }
             )

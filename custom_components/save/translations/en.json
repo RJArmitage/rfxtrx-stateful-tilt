@@ -64,18 +64,11 @@
                     "off_delay": "Off delay",
                     "off_delay_enabled": "Enable off delay",
                     "replace_device": "Select device to replace",
-                    "signal_repetitions": "Number of signal repetitions",
-
-                    "midpoint_supported": "Supports midpoint access",
-                    "midpoint_sync": "Sync when crossing midpoint",
-                    "midpoint_steps": "Steps to midpoint",
-                    "open_seconds": "Open time (secs)",
-                    "close_seconds": "Close time (secs)",
-                    "tilt1_ms": "Lower tilt time from midpoint (ms)",
-                    "tilt2_ms": "Upper tilt time from midpoint (ms)"
+                    "signal_repetitions": "Number of signal repetitions"
                 },
                 "title": "Configure device options"
             }
         }
-    }
+    },
+    "title": "Rfxtrx"
 }

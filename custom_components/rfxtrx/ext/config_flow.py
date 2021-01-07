@@ -6,6 +6,7 @@ from homeassistant.components.rfxtrx.cover import supported as cover_supported
 from .const import (
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
+    DEF_SYNC_SECONDS,
     DEF_SUPPORTS_MID,
     DEF_STEPS_MID,
     DEF_SYNC_MID,
@@ -13,12 +14,15 @@ from .const import (
     DEF_TILT_POS2_MS,
     CONF_CLOSE_SECONDS,
     CONF_OPEN_SECONDS,
+    CONF_SYNC_SECONDS,
     CONF_SUPPORTS_MID,
     CONF_STEPS_MID,
     CONF_SYNC_MID,
     CONF_TILT_POS1_MS,
     CONF_TILT_POS2_MS,
-    DEVICE_PACKET_TYPE_RFY
+    DEVICE_PACKET_TYPE_RFY,
+    DEVICE_PACKET_TYPE_BLINDS1,
+    DEVICE_PACKET_SUBTYPE_BLINDST19
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,6 +37,8 @@ def update_device_options(device, user_input):
         CONF_OPEN_SECONDS, DEF_OPEN_SECONDS)
     device[CONF_CLOSE_SECONDS] = user_input.get(
         CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
+    device[CONF_SYNC_SECONDS] = user_input.get(
+        CONF_SYNC_SECONDS, DEF_SYNC_SECONDS)
     device[CONF_TILT_POS1_MS] = user_input.get(
         CONF_TILT_POS1_MS, DEF_TILT_POS1_MS)
     device[CONF_TILT_POS2_MS] = user_input.get(
@@ -69,6 +75,11 @@ def update_data_schema(data_schema, device_object, device_data):
                             CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS),
                     ): int,
                     vol.Optional(
+                        CONF_SYNC_SECONDS,
+                        default=device_data.get(
+                            CONF_SYNC_SECONDS, DEF_SYNC_SECONDS),
+                    ): int,
+                    vol.Optional(
                         CONF_TILT_POS1_MS,
                         default=device_data.get(
                             CONF_TILT_POS1_MS, DEF_TILT_POS1_MS),
@@ -77,6 +88,27 @@ def update_data_schema(data_schema, device_object, device_data):
                         CONF_TILT_POS2_MS,
                         default=device_data.get(
                             CONF_TILT_POS2_MS, DEF_TILT_POS2_MS),
+                    ): int,
+                }
+            )
+        elif device_object.device.packettype == DEVICE_PACKET_TYPE_BLINDS1 and device_object.device.subtype == DEVICE_PACKET_SUBTYPE_BLINDST19:
+            # Add Somfy RFY tilt options
+            data_schema.update(
+                {
+                    vol.Optional(
+                        CONF_OPEN_SECONDS,
+                        default=device_data.get(
+                            CONF_OPEN_SECONDS, DEF_OPEN_SECONDS),
+                    ): int,
+                    vol.Optional(
+                        CONF_CLOSE_SECONDS,
+                        default=device_data.get(
+                            CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS),
+                    ): int,
+                    vol.Optional(
+                        CONF_SYNC_SECONDS,
+                        default=device_data.get(
+                            CONF_SYNC_SECONDS, DEF_SYNC_SECONDS),
                     ): int,
                 }
             )

@@ -71,6 +71,7 @@
                     "midpoint_steps": "Steps to midpoint",
                     "open_seconds": "Open time (secs)",
                     "close_seconds": "Close time (secs)",
+                    "sync_seconds": "Mid open/close time (secs)",
                     "tilt1_ms": "Lower tilt time from midpoint (ms)",
                     "tilt2_ms": "Upper tilt time from midpoint (ms)"
                 },

@@ -199,31 +199,45 @@ class OptionsFlow(OldOptionsFlow):
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
+    VERSION = 1
+    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
+
+    def __init__(self, x):
+        _LOGGER.info("Called __init__" + str(x))
+        super().__init__()
+        self._oldFlow = OldConfigFlow()
+
     async def async_step_user(self, user_input=None):
         """Step when user initializes a integration."""
-        return OldConfigFlow().async_step_user(user_input)
+        _LOGGER.info("Called async_step_user")
+        return await self._oldFlow.async_step_user(user_input)
 
     async def async_step_setup_network(self, user_input=None):
         """Step when setting up network configuration."""
-        return OldConfigFlow().async_step_setup_network(user_input)
+        _LOGGER.info("Called async_step_setup_network")
+        return self._oldFlow.async_step_setup_network(user_input)
 
     async def async_step_setup_serial(self, user_input=None):
         """Step when setting up serial configuration."""
-        return OldConfigFlow().async_step_setup_serial(user_input)
+        _LOGGER.info("Called async_step_setup_serial")
+        return self._oldFlow.async_step_setup_serial(user_input)
 
     async def async_step_setup_serial_manual_path(self, user_input=None):
-        return OldConfigFlow().async_step_setup_serial_manual_path(user_input)
+        _LOGGER.info("Called async_step_setup_serial_manual_path")
+        return self._oldFlow.async_step_setup_serial_manual_path(user_input)
 
     async def async_step_import(self, import_config=None):
         """Handle the initial step."""
-        return OldConfigFlow().async_step_import(import_config)
+        _LOGGER.info("Called async_step_import")
+        return self._oldFlow.async_step_import(import_config)
 
     async def async_validate_rfx(self, host=None, port=None, device=None):
         """Create data for rfxtrx entry."""
-        return OldConfigFlow().async_validate_rfx(host, port, device)
+        _LOGGER.info("Called async_validate_rfx")
+        return self._oldFlow.async_validate_rfx(host, port, device)
 
-    @staticmethod
-    @callback
+    @ staticmethod
+    @ callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Get the options flow for this handler."""
         _LOGGER.info("Called async_get_options_flow function")

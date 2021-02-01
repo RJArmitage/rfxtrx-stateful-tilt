@@ -24,3 +24,9 @@ DEVICE_PACKET_SUBTYPE_BLINDST19 = 0x13
 DEVICE_PACKET_TYPE_RFY = 0x1a
 
 DEVICE_TYPE_VOGUE_VERTICAL = "VogueVert"
+
+SVC_UPDATE_POSITION = "update_cover_position"
+SVC_INCREASE_TILT = "increase_cover_tilt"
+SVC_DECREASE_TILT = "decrease_cover_tilt"
+
+ATTR_AUTO_REPEAT = "repeat_automatically"

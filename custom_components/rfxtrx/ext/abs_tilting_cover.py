@@ -29,6 +29,8 @@ from homeassistant.const import (
 
 from homeassistant.core import callback
 
+from .const import ATTR_AUTO_REPEAT
+
 # Values returned for blind position in various states
 BLIND_POS_OPEN = 100
 BLIND_POS_TILTED_MAX = 99
@@ -106,7 +108,6 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         self._lift_position = BLIND_POS_OPEN
         self._tilt_step = 0
         self._state = STATE_OPEN
-        self._lastStopTime = time.time()
         self._autoStepActive = False
         self._autoStepDirection = 0
         self._lastCommandTime = time.time()
@@ -277,18 +278,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         """Open the cover tilt."""
         _LOGGER.info("Invoked async_open_cover_tilt")
 
-        if self._autoStepActive:
-            self._autoStepDirection = 1
-            if (time.time() - self._lastStopTime) < AUTO_STEP_CLICK_SEC:
-                _LOGGER.info("Auto tilting open_cover_tilt...")
-                while self._autoStepDirection > 0 and self._autoStepActive and self._tilt_step < self._blindMaxSteps:
-                    await self._async_set_cover_tilt_step(self._tilt_step + self._autoStepDirection)
-                    if self._tilt_step < self._blindMaxSteps:
-                        await asyncio.sleep(self._blindRepeatStepSecs)
-            else:
-                _LOGGER.info("Disabled auto advance of cover_tilt")
-            self._autoStepActive = False
-        elif self._hasMidCommand:
+        if self._hasMidCommand:
             await self._async_tilt_blind_to_mid_step()
         else:
             await self._async_set_cover_tilt_step(self._blindMidSteps)
@@ -297,34 +287,16 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         """Close the cover tilt."""
         _LOGGER.info("Invoked async_close_cover_tilt")
 
-        if self._autoStepActive:
-            self._autoStepDirection = -1
-            if (time.time() - self._lastStopTime) < AUTO_STEP_CLICK_SEC:
-                _LOGGER.info("Auto tilting close_cover_tilt...")
-                while self._autoStepDirection < 0 and self._autoStepActive and self._tilt_step > 0:
-                    await self._async_set_cover_tilt_step(self._tilt_step + self._autoStepDirection)
-                    if self._tilt_step > 0:
-                        await asyncio.sleep(self._blindRepeatStepSecs)
-            else:
-                _LOGGER.info("Disabled auto advance of cover_tilt")
-            self._autoStepActive = False
-        else:
-            await self._async_set_cover_tilt_step(0)
+        await self._async_set_cover_tilt_step(0)
 
     async def async_stop_cover_tilt(self, **kwargs):
         """Stop the cover."""
         _LOGGER.info("Invoked async_stop_cover_tilt")
 
-        lastStop = self._lastStopTime
-        now = time.time()
-        self._lastStopTime = now
-
-        self._autoStepActive = (now - lastStop) < AUTO_STEP_CLICK_SEC
         if self._autoStepActive:
-            _LOGGER.info("Enabled auto advance of cover_tilt")
-            self._autoStepDirection = 0
-        else:
             _LOGGER.info("Disabled auto advance of cover_tilt")
+            self._autoStepDirection = 0
+            self._autoStepActive = False
 
     async def async_set_cover_tilt_position(self, **kwargs):
         """Move the cover tilt to a specific position."""
@@ -353,6 +325,46 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
                     await self._async_tilt_blind_to_mid_step()
                 else:
                     await self._async_set_cover_tilt_step(tilt)
+
+    # New service operations
+
+    async def async_update_cover_position(self, **kwargs):
+        """Update the internal position."""
+        _LOGGER.info("Invoked async_update_cover_position")
+
+        if ATTR_POSITION in kwargs:
+            self._lift_position = kwargs[ATTR_POSITION]
+
+        if ATTR_TILT_POSITION in kwargs:
+            self._tilt_step = self._tilt_to_steps(kwargs[ATTR_TILT_POSITION])
+
+        if self._lift_position <= BLIND_POS_TILTED_MIN:
+            self._lift_position = BLIND_POS_CLOSED
+            state = STATE_CLOSED
+        else:
+            state = STATE_OPEN
+
+        await self._set_state(state, self._lift_position, self._tilt_step)
+
+    async def async_increase_cover_tilt(self, **kwargs):
+        """Increase the cover tilt step."""
+        _LOGGER.info("Invoked async_increase_cover_tilt")
+
+        repeating = kwargs[ATTR_AUTO_REPEAT] if ATTR_AUTO_REPEAT in kwargs else False
+        if repeating:
+            await self._async_repeat_tilt(1, self._blindMaxSteps)
+        else:
+            await self._async_repeat_tilt(1)
+
+    async def async_decrease_cover_tilt(self, **kwargs):
+        """Decrease the cover tilt step."""
+        _LOGGER.info("Invoked async_decrease_cover_tilt")
+
+        repeating = kwargs[ATTR_AUTO_REPEAT] if ATTR_AUTO_REPEAT in kwargs else False
+        if repeating:
+            await self._async_repeat_tilt(-1, self._blindMaxSteps)
+        else:
+            await self._async_repeat_tilt(-1)
 
     # Action functions
 
@@ -437,6 +449,35 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
             if newDelay is not None:
                 delay = newDelay
             await self._wait_and_set_state(delay, STATE_OPENING, STATE_CLOSED, BLIND_POS_CLOSED, self._blindMidSteps)
+
+    async def _async_repeat_tilt(self, direction, maxSteps=0):
+        if maxSteps <= 1:
+            self._autoStepDirection = 0
+            self._autoStepActive = False
+            newTilt = self._tilt_step + direction
+            if newTilt >= 0 and newTilt <= self._blindMaxSteps:
+                await self._async_set_cover_tilt_step(newTilt)
+        else:
+            if not(self._autoStepActive) and self._autoStepDirection != direction:
+                _LOGGER.info(
+                    "Starting auto repeating tilt, direction=" + str(direction))
+                self._autoStepDirection = direction
+                self._autoStepActive = True
+                steps = maxSteps
+                while steps > 0 and self._autoStepActive and self._autoStepDirection == direction:
+                    newTilt = self._tilt_step + self._autoStepDirection
+                    if newTilt < 0 or newTilt > self._blindMaxSteps:
+                        self._autoStepDirection = 0
+                        self._autoStepActive = False
+                    else:
+                        await self._async_set_cover_tilt_step(newTilt)
+                        _LOGGER.info("Waiting repeast secs = " +
+                                     str(self._blindRepeatStepSecs))
+                        await asyncio.sleep(self._blindRepeatStepSecs)
+                        steps = steps - 1
+                _LOGGER.info("Finished auto repeating tilt")
+            else:
+                _LOGGER.info("Ignoring duplicate auto repeating tilt")
 
     # Helper functions
 

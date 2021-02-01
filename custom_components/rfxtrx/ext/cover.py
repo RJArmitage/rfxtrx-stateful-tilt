@@ -10,7 +10,9 @@ from homeassistant.components.rfxtrx import (
     get_rfx_object,
 )
 
-from . import create_cover_entity
+from . import (
+    create_cover_entity,
+    async_define_sync_services)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,6 +24,8 @@ async def async_setup_entry(
 ):
     """Set up config entry."""
     _LOGGER.info("Called overridden async_setup_entry")
+
+    await async_define_sync_services()
 
     discovery_info = config_entry.data
     device_ids = set()

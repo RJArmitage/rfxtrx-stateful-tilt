@@ -47,7 +47,7 @@ Simply copy the contents of the custom_components/rfxtrx folder to the custom_co
 
 Simply add blinds using the standard RFXTRX integration options dialog. The component will automatically detect if you select a supported blind type. The dialog will then show additional options:
 
-## Somfy Venetian Blinds
+## Somfy Venetian Blinds
 
 These options are only available when the Venetian blind mode is set to "US" or "EU". Note that Somfy venetian blinds have a "my" position which would normally be set to the blind mid position (ie. fully tilted open). Hence a Somfy venetian blind has three "goto" positions - fully lifted, fully closed and tilted open.
 
@@ -59,7 +59,7 @@ At the moment the component does not support full tilt operations. Instead it su
 - **Lower tilt time from midpoint (ms)** -
 - **Upper tilt time from midpoint (ms)** -
 
-## Lovolite Vogue Vertical Blinds
+## Lovolite Vogue Vertical Blinds
 
 The Louvolite Vogue vertical blinds motor allows the blinds to be tilted to 0, 45, 90, 135 and 180 degrees. 0 and 180 degrees are fully closed and 90 degrees is fully open.
 

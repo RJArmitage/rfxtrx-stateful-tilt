@@ -25,11 +25,11 @@ _LOGGER = logging.getLogger(__name__)
 
 DEVICE_TYPE = "Vogue Vertical"
 
-CMD_CLOSE_CW = 0x00
-CMD_CLOSE_CCW = 0x01
-CMD_45_DEGREES = 0x02
-CMD_90_DEGREES = 0x03
-CMD_135_DEGREES = 0x04
+CMD_VOGUE_CLOSE_CW = 0x00
+CMD_VOGUE_CLOSE_CCW = 0x01
+CMD_VOGUE_45_DEGREES = 0x02
+CMD_VOGUE_90_DEGREES = 0x03
+CMD_VOGUE_135_DEGREES = 0x04
 
 # Event 0919130400A1DB010000
 
@@ -57,19 +57,19 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         _LOGGER.info("LOUVOLITE TILTING BLIND")
         if target == 0:
             movement = STATE_CLOSING
-            command = CMD_CLOSE_CCW
+            command = CMD_VOGUE_CLOSE_CCW
         elif target == 1:
             movement = STATE_OPENING
-            command = CMD_45_DEGREES
+            command = CMD_VOGUE_45_DEGREES
         elif target == 2:
             movement = STATE_OPENING
-            command = CMD_90_DEGREES
+            command = CMD_VOGUE_90_DEGREES
         elif target == 3:
             movement = STATE_OPENING
-            command = CMD_135_DEGREES
+            command = CMD_VOGUE_135_DEGREES
         else:
             movement = STATE_CLOSING
-            command = CMD_CLOSE_CW
+            command = CMD_VOGUE_CLOSE_CW
 
         await self._set_state(movement, BLIND_POS_CLOSED, self._tilt_step)
         await self._async_send(self._device.send_command, command)
@@ -81,7 +81,7 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         """Callback to close the blind"""
         _LOGGER.info("LOUVOLITE CLOSING BLIND")
         await self._set_state(STATE_CLOSING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send(self._device.send_command, CMD_CLOSE_CCW)
+        await self._async_send(self._device.send_command, CMD_VOGUE_CLOSE_CCW)
         return self._blindCloseSecs
 
     # Replace with action to open blind
@@ -89,12 +89,12 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         """Callback to open the blind"""
         _LOGGER.info("LOUVOLITE OPENING BLIND")
         await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send(self._device.send_command, CMD_90_DEGREES)
+        await self._async_send(self._device.send_command, CMD_VOGUE_90_DEGREES)
         return self._blindSyncSecs
 
     async def _async_do_tilt_blind_to_mid(self):
         """Callback to tilt the blind to mid"""
         _LOGGER.info("LOUVOLITE TILTING BLIND TO MID")
         await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send(self._device.send_command, CMD_90_DEGREES)
+        await self._async_send(self._device.send_command, CMD_VOGUE_90_DEGREES)
         return self._blindOpenSecs

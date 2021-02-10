@@ -1,6 +1,6 @@
 {
   "domain": "rfxtrx",
-  "name": "RFXCOM RFXtrx Enhanced Tilt",
+  "name": "RFXCOM RFXtrx + Stateful Tilt",
   "documentation": "https://github.com/RJArmitage/rfxtrx-homeassistant",
   "requirements": ["pyRFXtrx==0.26.1"],
   "codeowners": ["@danielhiversen", "@elupus", "@RobBie1221", "@RJArmitage"],

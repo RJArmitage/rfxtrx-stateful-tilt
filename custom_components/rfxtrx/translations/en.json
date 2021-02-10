@@ -65,6 +65,7 @@
                     "off_delay_enabled": "Enable off delay",
                     "replace_device": "Select device to replace",
                     "signal_repetitions": "Number of signal repetitions",
+                    "venetian_blind_mode": "Venetian blind mode",
 
                     "midpoint_supported": "Supports midpoint access",
                     "midpoint_sync": "Sync when crossing midpoint",

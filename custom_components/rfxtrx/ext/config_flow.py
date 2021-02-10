@@ -48,22 +48,22 @@ def update_device_options(device, user_input):
 def update_data_schema(data_schema, device_object, device_data):
     if (cover_supported(device_object)):
         if device_object.device.packettype == DEVICE_PACKET_TYPE_RFY:
-            # Add Somfy RFY tilt options
+            # Add Somfy RFY venetian tilt options
             data_schema.update(
                 {
-                    vol.Optional(
-                        CONF_SUPPORTS_MID,
-                        default=device_data.get(
-                            CONF_SUPPORTS_MID, DEF_SUPPORTS_MID)
-                    ): bool,
-                    vol.Optional(
-                        CONF_SYNC_MID,
-                        default=device_data.get(CONF_SYNC_MID, DEF_SYNC_MID),
-                    ): bool,
-                    vol.Optional(
-                        CONF_STEPS_MID,
-                        default=device_data.get(CONF_STEPS_MID, DEF_STEPS_MID),
-                    ): int,
+                    # vol.Optional(
+                    #     CONF_SUPPORTS_MID,
+                    #     default=device_data.get(
+                    #         CONF_SUPPORTS_MID, DEF_SUPPORTS_MID)
+                    # ): bool,
+                    # vol.Optional(
+                    #     CONF_SYNC_MID,
+                    #     default=device_data.get(CONF_SYNC_MID, DEF_SYNC_MID),
+                    # ): bool,
+                    # vol.Optional(
+                    #     CONF_STEPS_MID,
+                    #     default=device_data.get(CONF_STEPS_MID, DEF_STEPS_MID),
+                    # ): int,
                     vol.Optional(
                         CONF_OPEN_SECONDS,
                         default=device_data.get(
@@ -92,7 +92,7 @@ def update_data_schema(data_schema, device_object, device_data):
                 }
             )
         elif device_object.device.packettype == DEVICE_PACKET_TYPE_BLINDS1 and device_object.device.subtype == DEVICE_PACKET_SUBTYPE_BLINDST19:
-            # Add Somfy RFY tilt options
+            # Add Lovolite Vogue vertical tilt options
             data_schema.update(
                 {
                     vol.Optional(

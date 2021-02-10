@@ -13,7 +13,7 @@ I have a number of venetian blinds which use Somfy motors. Now for me the whole 
 
 - I want to get full scripting support. I should be able to tell the blind to tilt to 70% say and have the blind "know" that it is currently tilted to 30% so needs to step 7 positions to get to 70% tilted. This also makes support via Alexa better as I can tell the blind to tilt to 80% or whatever.
 
-- The concept of "opening" and "closing" the blinds should relate to tilting the blind and not lifting. An open venetian blind is one that is tilted to open - not one that is lifted. A closed blind is both dropped and tully tilted closed.
+- The concept of "opening" and "closing" the blinds should relate to tilting the blind and not lifting. To me an open venetian blind is one that is tilted to open - not one that is lifted. A closed blind is both dropped and tully tilted closed.
 
 - Privacy is key. I want to be certain that the blinds will only attempt to lift if they are explicitly told to. In particular if using Alexa integration, if Alexa is told to "open" the blind it should do this by tilting the blind to open and not by lifting the blind.
 
@@ -28,21 +28,21 @@ This implementation only supports two types of blinds:
 
 - _Venetian blinds_ using **_Somfy_** battery and mains-powered RTS motors such as **Sonesse** and **Lift & Tilt** motors.
 
-- _Vertical blinds_ using **_Louvolite Vogue_** battery powered motors
+- _Vertical blinds_ using **_Louvolite Vogue_** battery powered motors. Note that this requires RFXTRX firmware 1044 or better.
 
 Why only those blinds? Simply because those are the ones I have so those are the ones I can test against. I also have Somfy roller blinds which are controlled by the original Home Assistant integration.
 <br><br>
 
 # Limitations
 
-The supported blind motors do not report their state. This means that, for example, if I open a blind in Home Assistant and then close it using the blind's own controller, the Home Assistant won't know and will still show it as open.
+1. The supported blind motors do not report their state. This means that, for example, if I open a blind in Home Assistant and then close it using the blind's own controller, the Home Assistant won't know and will still show it as open.
 
-At present the full tilt support does not work. The RFXCOM documentation says that you can perform a tilt by sending either a 0.5 sec or 2 sec up or down operastion. However this does not work on my blinds and always either lifts or closes the blind. I suspect the information is out of date for modern motors. If better support is added to the RFXCOM firmware then support will be added to this component. At the momewnt this component simulates a tilt position operation.
-<br><br>
+2. At present the full tilt support does not work. The RFXTRX documentation says that you can perform a tilt by sending either a 0.5 sec or 2 sec up or down operation depending if you are in EU or US mode. However this simply does not work on my blinds and always either lifts or closes the blind. I suspect the information is out of date for modern motors (my blinds are very new). If better support is added to the RFXTRX firmware then support will be added to this component. At the moment this component simulates an intermediate tilt position operation.
+   <br><br>
 
 # Installing and uninstalling
 
-Simply copy the contents of the custom_components/rfxtrx folder to the custom_components/rfxtrx folder of your home assistant and then restart. If you don't already use the RFXTRX integration then you should add it from the integrations page as usual. If you want to get rid of the new component then simply delete the custom_components/rfxtrx folder and restart home assistant.
+Simply copy the contents of the custom_components/rfxtrx folder to the config/custom_components/rfxtrx folder of your home assistant and then restart. If you don't already use the RFXTRX integration then you should add it from the integrations page as usual. If you want to get rid of the new component then simply delete the config/custom_components/rfxtrx folder and restart home assistant.
 <br><br>
 
 # Usage
@@ -51,9 +51,9 @@ Simply add blinds using the standard RFXTRX integration options dialog. The comp
 
 ## Somfy Venetian Blinds
 
-These options are only available when the Venetian blind mode is set to "US" or "EU". Note that Somfy venetian blinds have a "my" position which would normally be set to the blind mid position (ie. fully tilted open). Hence a Somfy venetian blind has three "goto" positions - fully lifted, fully closed and tilted open.
+These options are only available when the venetian blind mode is set to "US" or "EU". Note that Somfy venetian blinds have a "my" position which would normally be set to the blind mid position (ie. fully tilted open). Hence a Somfy venetian blind has three directly supported states - fully lifted, fully closed and tilted open.
 
-At the moment the component does not support full tilt operations. Instead it supports tilting to the mid point (position 2) along with an extra tilt before and after this point (positions 1 and 3). The extra positions are provided by tilting up or down from the mid point for a number of milliseconds. Set whatever works for you in the configuration.
+At the moment the component does not support the full tilt operations that the motor is capable of. Instead it supports tilting to the mid point (50%) along with an extra tilt before and after this point (25% and 75%). The extra positions are provided by tilting up or down from the mid point for a number of milliseconds. Set whatever works for you in the configuration.
 
 - **Open time (secs)** - Number of seconds that the blind requires to completely lift. Allow the time for the worst case which would be to lift from fully tilted upward.
 - **Close time (secs)** - Number of seconds that the blind requires to complely close when fuly lifted.
@@ -61,7 +61,7 @@ At the moment the component does not support full tilt operations. Instead it su
 - **Lower tilt time from midpoint (ms)** -
 - **Upper tilt time from midpoint (ms)** -
 
-Note that the open and close times are important as a Somfy motor reacts differently to a "stop" command if the blind is in motion or stationary. The component will only accept the "stop" command if it believes the blind is in motion. The mid time is important as the component needs to know how long to allow the blind to reach the mid position before it then tries to move to another position. This makes the tilt operation more reliable.
+The open and close times are important as a Somfy motor reacts differently to a "stop" command if the blind is in motion or stationary. The component will only accept the "stop" command if it believes the blind is in motion. The mid time is important as the component needs to know how long to allow the blind to reach the mid position before it then tries to tilt to another position. This makes the tilt operation more reliable.
 
 ## Lovolite Vogue Vertical Blinds
 
@@ -87,7 +87,7 @@ The component adds three new scripting operations:
 
 - **rfxtrx.update_cover_position** - Sets the internal state of the position and tilt position of the blind. This is intended to be used when defining a Somfy group device. In this case the tilt states of any blinds in the Somfy group would be wrong. To solve this simply create an automation to update the states of the indivisual blinds in the group when the group device changes. For example this automation updates the 5 individual blinds that make up Somfy group cover.living_room whenever the group tilt position changes:
 
-````
+```
     - alias: "Living Room sync blind state"
       description: "Sync the tilt of individual blinds with group blind"
       trigger:
@@ -105,5 +105,5 @@ The component adds three new scripting operations:
         - cover.living_room_3
         - cover.living_room_4
         - cover.living_room_5
-      mode: single```
-````
+      mode: single
+```

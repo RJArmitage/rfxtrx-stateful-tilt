@@ -19,23 +19,25 @@ I have a number of venetian blinds which use Somfy motors. Now for me the whole 
 
 - I want to be able to control my blinds using Somfy groups as well as individually. Somfy motors have the ability to assign a single channel on their controller to more than one blind. This means that to control all those blinds only a single instruction is sent. Now, it is possible to do something similar in Home Assistant by creating a cover group. But that's missing the point of the Somfy function. It would mean that each operation would be sent seperately to each blind in the group. That's irritating to me as all the blinds start and stop moving seperately with a sort of ripple effect. I have 5 blinds in a bay window and this looks untidy!
 
+- I want the blind icon in Home Assistant to clue me about privacy. If the blind is tilted to anything other than fully closed then it should show the blind as open. Eventually an icon that shows intermediate positions would be nice but that's for the future.
+
 So, if you have one or more of those requirements then maybe this component will be useful for you. If not then you should continue with the existing built-in Home Assistant RFXTRX integration.
 <br><br>
 
 # Which blinds are supported
 
-This implementation only supports two types of blinds:
+This implementation only supports two types of blinds. It is fully compatible with everying else that RFXTRX supports but uses the existing RFXTRX functionality:
 
-- _Venetian blinds_ using **_Somfy_** battery and mains-powered RTS motors such as **Sonesse** and **Lift & Tilt** motors.
+- **_Venetian blinds_** using **_Somfy_** battery and mains-powered RTS motors such as **Sonesse** and **Lift & Tilt** motors.
 
-- _Vertical blinds_ using **_Louvolite Vogue_** battery powered motors. Note that this requires RFXTRX firmware 1044 or better.
+- **_Vertical blinds_** using **_Louvolite Vogue_** battery powered motors. Note that this requires RFXTRX firmware 1044 or better.
 
 Why only those blinds? Simply because those are the ones I have so those are the ones I can test against. I also have Somfy roller blinds which are controlled by the original Home Assistant integration.
 <br><br>
 
 # Limitations
 
-1. The supported blind motors do not report their state. This means that, for example, if I open a blind in Home Assistant and then close it using the blind's own controller, the Home Assistant won't know and will still show it as open.
+1. The supported blind motors do not report their state. This means that, for example, if I open a blind in Home Assistant and then close it using the blind's own controller, the Home Assistant won't know and will still show it as open. The component does its best to synchronise when it can. So if was then later told to close then the blind would remain closed and then be up to date again.
 
 2. At present the full tilt support does not work. The RFXTRX documentation says that you can perform a tilt by sending either a 0.5 sec or 2 sec up or down operation depending if you are in EU or US mode. However this simply does not work on my blinds and always either lifts or closes the blind. I suspect the information is out of date for modern motors (my blinds are very new). If better support is added to the RFXTRX firmware then support will be added to this component. At the moment this component simulates an intermediate tilt position operation.
    <br><br>
@@ -58,17 +60,21 @@ At the moment the component does not support the full tilt operations that the m
 - **Open time (secs)** - Number of seconds that the blind requires to completely lift. Allow the time for the worst case which would be to lift from fully tilted upward.
 - **Close time (secs)** - Number of seconds that the blind requires to complely close when fuly lifted.
 - **Mid open/close time (secs)** - Number of seconds that the blind requires to tilt to its mid point (the "my" position). Allow the time for the worst case which would be to tilt to the mid position from fully tilted upward as the blind will normally first tilt to closed and then tilt to the mid point.
-- **Lower tilt time from midpoint (ms)** -
-- **Upper tilt time from midpoint (ms)** -
+- **Lower tilt time from midpoint (ms)** - The component simulates a 25% tilt operation by tilting to the mid point and then closing the blind for this number of milliseconds. This is not ideal and will be removed if better tilt support is added to RFXTRX.
+- **Upper tilt time from midpoint (ms)** - The component simulates a 75% tilt operation by tilting to the mid point and then lifting the blind for this number of milliseconds. Again this will be removed if better tilt support is added to RFXTRX.
 
-The open and close times are important as a Somfy motor reacts differently to a "stop" command if the blind is in motion or stationary. The component will only accept the "stop" command if it believes the blind is in motion. The mid time is important as the component needs to know how long to allow the blind to reach the mid position before it then tries to tilt to another position. This makes the tilt operation more reliable.
+At present the blind is able to provide three open tilt positions. The Somfy motor can do better than this and if better support is added to RFXTRX then the component will provide it.
+
+Note that the open and close times are important as a Somfy motor reacts differently to a "stop" command if the blind is in motion or stationary. The component will only accept the "stop" command if it believes the blind is in motion. The mid time is important as the component needs to know how long to allow the blind to reach the mid position before it then tries to tilt to another position. This makes the tilt operation more reliable.
+
+The Somfy blind will not lift the blind if instructed to open. Instead it will use the tilt to mid operation to tilt the blind open. Similarly a close command will tilt to closed. This also takes into account if the blind is currently lifted. So, an open or close instruction will always protect privacy by ensuring the blind is tilted as necessary. To lift the blind set the cover position to more than 50% using cover.set_cover_position or the position slider in Lovelace. Using Alexa you can lift the blind using something like "Alexa, set office blind to 100%"
 
 ## Lovolite Vogue Vertical Blinds
 
-The Louvolite Vogue vertical blinds motor allows the blinds to be tilted to 0, 45, 90, 135 and 180 degrees. 0 and 180 degrees are fully closed and 90 degrees is fully open.
+The Louvolite Vogue vertical blinds motor allows the blinds to be tilted to 0, 45, 90, 135 and 180 degrees. These are positions 0%, 25%, 50%, 75% and 100%. 0% and 100% are both fully closed. 50% is fully open. Closing the blind will tilt to 0%. Opening the blind tilts to 50%.
 
-- **Open time (secs)** -
-- **Close time (secs)** - Number of seconds that the blind requires to complely close. Allow the time for the worst case which would be that the blind is tilted to the oposite close position.
+- **Open time (secs)** - Number of seconds that the blind requires to complely open to 50%. Allow the time for the worst case which would be that the blind starts fully closed.
+- **Close time (secs)** - Number of seconds that the blind requires to complely close. Allow the time for the worst case which would be that the blind is tilted to the opposite close position.
 - **Mid open/close time (secs)** -
 
 ## Service Operations

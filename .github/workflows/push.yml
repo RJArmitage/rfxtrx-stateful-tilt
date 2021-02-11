@@ -3,8 +3,10 @@ name: Push actions
 on:
   push:
     branches:
-      - master
+      - main
       - dev
+  
+  workflow_dispatch:
 
 jobs:
   validate:

@@ -21,7 +21,12 @@ from .const import (
     CONF_SYNC_SECONDS,
     CONF_SYNC_MID,
     CONF_TILT_POS1_MS,
-    CONF_TILT_POS2_MS
+    CONF_TILT_POS2_MS,
+    DEF_CLOSE_SECONDS,
+    DEF_OPEN_SECONDS,
+    DEF_SYNC_SECONDS,
+    DEF_TILT_POS1_MS,
+    DEF_TILT_POS2_MS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,16 +65,21 @@ class SomfyVenetianBlind(AbstractTiltingCover):
                          True,  # Supports mid point
                          True,  # Supports lift
                          False,  # Do not lift on open
-                         entity_info[CONF_SYNC_MID],  # Sync on mid point
-                         entity_info[CONF_OPEN_SECONDS],  # Open time
-                         entity_info[CONF_CLOSE_SECONDS],  # Close time
-                         entity_info[CONF_SYNC_SECONDS],  # Sync time ms
+                         False,  # Sync on mid point
+                         entity_info.get(CONF_OPEN_SECONDS,
+                                         DEF_OPEN_SECONDS),  # Open time
+                         entity_info.get(CONF_CLOSE_SECONDS,
+                                         DEF_CLOSE_SECONDS),  # Close time
+                         entity_info.get(CONF_SYNC_SECONDS,
+                                         DEF_SYNC_SECONDS),  # Sync time ms
                          500  # Ms for each step
                          )
 
         self._venetianBlindMode = entity_info.get(CONF_VENETIAN_BLIND_MODE)
-        self._tiltPos1Sec = entity_info[CONF_TILT_POS1_MS] / 1000
-        self._tiltPos2Sec = entity_info[CONF_TILT_POS2_MS] / 1000
+        self._tiltPos1Sec = entity_info.get(
+            CONF_TILT_POS1_MS, DEF_TILT_POS1_MS) / 1000
+        self._tiltPos2Sec = entity_info.get(
+            CONF_TILT_POS2_MS, DEF_TILT_POS2_MS) / 1000
 
     # Handle tilting a somfy blind. At present this is done by simulating a tilt using
     # an open or close followed by a delay. This needs to be replaced by a number of

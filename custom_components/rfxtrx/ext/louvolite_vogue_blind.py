@@ -18,7 +18,10 @@ from .const import (
     CONF_SYNC_SECONDS,
     CONF_SYNC_MID,
     CONF_TILT_POS1_MS,
-    CONF_TILT_POS2_MS
+    CONF_TILT_POS2_MS,
+    DEF_CLOSE_SECONDS,
+    DEF_OPEN_SECONDS,
+    DEF_SYNC_SECONDS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,9 +49,12 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
                          False,  # Does not support lift
                          False,  # Do not lift on open
                          False,  # Does not require sync on mid point
-                         entity_info[CONF_OPEN_SECONDS],  # Open time
-                         entity_info[CONF_CLOSE_SECONDS],  # Close time
-                         entity_info[CONF_SYNC_SECONDS],  # Sync time ms
+                         entity_info.get(CONF_OPEN_SECONDS,
+                                         DEF_OPEN_SECONDS),  # Open time
+                         entity_info.get(CONF_CLOSE_SECONDS,
+                                         DEF_CLOSE_SECONDS),  # Close time
+                         entity_info.get(CONF_SYNC_SECONDS,
+                                         DEF_SYNC_SECONDS),  # Sync time ms
                          2000  # Ms for each step
                          )
         _LOGGER.info("Create Louvolite Vogue tilting blind " + str(device_id))

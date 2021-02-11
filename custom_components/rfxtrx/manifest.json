@@ -1,7 +1,7 @@
 {
   "domain": "rfxtrx",
   "name": "RFXCOM RFXtrx + Stateful Tilt",
-  "documentation": "https://github.com/RJArmitage/rfxtrx-homeassistant",
+  "documentation": "https://github.com/RJArmitage/rfxtrx-stateful-tilt",
   "requirements": ["pyRFXtrx==0.26.1"],
   "codeowners": ["@danielhiversen", "@elupus", "@RobBie1221", "@RJArmitage"],
   "config_flow": true

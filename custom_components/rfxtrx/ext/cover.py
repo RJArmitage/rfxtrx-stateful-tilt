@@ -2,17 +2,17 @@ import logging
 from homeassistant.components.rfxtrx.cover import *
 from homeassistant.components.rfxtrx.cover import (
     CONF_DEVICES,
-    supported,
+    supported
 )
 from homeassistant.components.rfxtrx import (
     CONF_DATA_BITS,
     get_device_id,
-    get_rfx_object,
+    get_rfx_object
 )
-
 from . import (
     create_cover_entity,
-    async_define_sync_services)
+    async_define_sync_services
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,10 +47,6 @@ async def async_setup_entry(
         device_ids.add(device_id)
 
         entity = create_cover_entity(event.device, device_id, entity_info)
-        # if entity is None:
-        # entity = RfxtrxCover(
-        #     event.device, device_id, entity_info[CONF_SIGNAL_REPETITIONS]
-        # )
         entities.append(entity)
 
     async_add_entities(entities)

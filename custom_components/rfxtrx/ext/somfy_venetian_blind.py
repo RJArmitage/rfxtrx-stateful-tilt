@@ -1,19 +1,19 @@
 import logging
 import asyncio
-
 from homeassistant.const import (
     STATE_OPENING,
-    STATE_CLOSING)
-
+    STATE_CLOSING
+)
 from homeassistant.components.rfxtrx import CONF_SIGNAL_REPETITIONS
-
 from homeassistant.components.rfxtrx.const import (
     CONF_VENETIAN_BLIND_MODE,
     CONST_VENETIAN_BLIND_MODE_EU,
     CONST_VENETIAN_BLIND_MODE_US
 )
-
-from .abs_tilting_cover import AbstractTiltingCover, BLIND_POS_CLOSED
+from .abs_tilting_cover import (
+    AbstractTiltingCover,
+    BLIND_POS_CLOSED
+)
 from .const import (
     CONF_CLOSE_SECONDS,
     CONF_OPEN_SECONDS,
@@ -88,31 +88,28 @@ class SomfyVenetianBlind(AbstractTiltingCover):
         _LOGGER.info("SOMFY VENETIAN TILTING BLIND")
         if target == 0:
             await self._async_set_cover_position(BLIND_POS_CLOSED)
+
         elif target == 1:
-            # If not already closed then close first
+            # If not already at mid point then move first
             if steps != -1:
-                _LOGGER.info("Tilt blind to mid")
                 await self._async_tilt_blind_to_mid_step()
-            _LOGGER.info("Close blind")
+
             await self._async_send(self._device.send_command, CMD_SOMFY_DOWN)
-            _LOGGER.info("Wait... " + str(self._tiltPos1Sec))
             await asyncio.sleep(self._tiltPos1Sec)
-            _LOGGER.info("Stop")
             await self._async_send(self._device.send_command, CMD_SOMFY_STOP)
+
         elif target == 2:
             await self._async_tilt_blind_to_mid_step()
-            await self._async_send(self._device.send_command, CMD_SOMFY_STOP)
+
         elif target == 3:
             # If not already at mid point then move first
             if steps != 1:
-                _LOGGER.info("Tilt blind to mid")
                 await self._async_tilt_blind_to_mid_step()
-            _LOGGER.info("Open blind")
+
             await self._async_send(self._device.send_command, CMD_SOMFY_UP)
-            _LOGGER.info("Wait... " + str(self._tiltPos2Sec))
             await asyncio.sleep(self._tiltPos2Sec)
-            _LOGGER.info("Stop")
             await self._async_send(self._device.send_command, CMD_SOMFY_STOP)
+
         elif target == 4:
             await self._async_set_cover_position(BLIND_POS_CLOSED)
 
@@ -120,19 +117,19 @@ class SomfyVenetianBlind(AbstractTiltingCover):
 
     # Replace with action to close blind
     async def _async_do_close_blind(self):
-        """Callback to close the blind"""
+        """Callback to close a Somfy blind"""
         _LOGGER.info("SOMFY VENETIAN CLOSING BLIND")
         await self._set_state(STATE_CLOSING, BLIND_POS_CLOSED, self._tilt_step)
         await self._async_send(self._device.send_command, CMD_SOMFY_DOWN)
 
     # Replace with action to open blind
     async def _async_do_open_blind(self):
-        """Callback to open the blind"""
+        """Callback to open a Somfy blind"""
         _LOGGER.info("SOMFY VENETIAN OPENING BLIND")
         await self._async_send(self._device.send_command, CMD_SOMFY_UP)
 
     async def _async_do_tilt_blind_to_mid(self):
-        """Callback to tilt the blind to mid"""
+        """Callback to tilt a Somfy blind to mid"""
         _LOGGER.info("SOMFY VENETIAN TILTING BLIND TO MID")
         await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
         await self._async_send(self._device.send_command, CMD_SOMFY_STOP)

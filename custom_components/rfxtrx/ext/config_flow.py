@@ -1,8 +1,6 @@
 import voluptuous as vol
 import logging
-
 from homeassistant.components.rfxtrx.cover import supported as cover_supported
-
 from .const import (
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
@@ -104,11 +102,6 @@ def update_data_schema(data_schema, device_object, device_data):
                         CONF_CLOSE_SECONDS,
                         default=device_data.get(
                             CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS),
-                    ): int,
-                    vol.Optional(
-                        CONF_SYNC_SECONDS,
-                        default=device_data.get(
-                            CONF_SYNC_SECONDS, DEF_SYNC_SECONDS),
-                    ): int,
+                    ): int
                 }
             )

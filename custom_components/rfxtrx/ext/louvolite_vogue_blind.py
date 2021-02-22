@@ -1,27 +1,19 @@
 import logging
 from homeassistant.components.rfxtrx import CONF_SIGNAL_REPETITIONS
-
 from .abs_tilting_cover import (
     AbstractTiltingCover,
-    BLIND_POS_CLOSED)
-
+    BLIND_POS_CLOSED
+)
 from homeassistant.const import (
     STATE_CLOSED,
     STATE_CLOSING,
-    STATE_OPEN,
-    STATE_OPENING)
-
+    STATE_OPENING
+)
 from .const import (
     CONF_CLOSE_SECONDS,
     CONF_OPEN_SECONDS,
-    CONF_STEPS_MID,
-    CONF_SYNC_SECONDS,
-    CONF_SYNC_MID,
-    CONF_TILT_POS1_MS,
-    CONF_TILT_POS2_MS,
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
-    DEF_SYNC_SECONDS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,6 +34,10 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
 
     def __init__(self, device, device_id, entity_info, event=None):
         device.type_string = DEVICE_TYPE
+
+        openSecs = entity_info.get(CONF_OPEN_SECONDS, DEF_OPEN_SECONDS)
+        closeSecs = entity_info.get(CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
+
         super().__init__(device, device_id,
                          entity_info[CONF_SIGNAL_REPETITIONS], event,
                          2,  #  2 steps to mid point
@@ -49,12 +45,9 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
                          False,  # Does not support lift
                          False,  # Do not lift on open
                          False,  # Does not require sync on mid point
-                         entity_info.get(CONF_OPEN_SECONDS,
-                                         DEF_OPEN_SECONDS),  # Open time
-                         entity_info.get(CONF_CLOSE_SECONDS,
-                                         DEF_CLOSE_SECONDS),  # Close time
-                         entity_info.get(CONF_SYNC_SECONDS,
-                                         DEF_SYNC_SECONDS),  # Sync time ms
+                         min(openSecs, closeSecs),  # Open time
+                         max(openSecs, closeSecs),  # Close time
+                         max(openSecs, closeSecs),  # Sync time ms
                          2000  # Ms for each step
                          )
         _LOGGER.info("Create Louvolite Vogue tilting blind " + str(device_id))
@@ -77,9 +70,11 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
             movement = STATE_CLOSING
             command = CMD_VOGUE_CLOSE_CW
 
+        delay = self._blindOpenSecs if steps <= 2 else self._blindCloseSecs
+
         await self._set_state(movement, BLIND_POS_CLOSED, self._tilt_step)
         await self._async_send(self._device.send_command, command)
-        await self._wait_and_set_state(self._blindSyncSecs, movement, STATE_CLOSED, BLIND_POS_CLOSED, target)
+        await self._wait_and_set_state(delay, movement, STATE_CLOSED, BLIND_POS_CLOSED, target)
         return target
 
     # Replace with action to close blind
@@ -96,7 +91,7 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         _LOGGER.info("LOUVOLITE OPENING BLIND")
         await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
         await self._async_send(self._device.send_command, CMD_VOGUE_90_DEGREES)
-        return self._blindSyncSecs
+        return self._blindOpenSecs
 
     async def _async_do_tilt_blind_to_mid(self):
         """Callback to tilt the blind to mid"""

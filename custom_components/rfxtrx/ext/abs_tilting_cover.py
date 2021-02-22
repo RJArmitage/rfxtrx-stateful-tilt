@@ -2,10 +2,14 @@
 import logging
 import asyncio
 import time
-from typing import Any, Callable, Optional, Sequence, cast
-
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    Sequence,
+    cast
+)
 from .. import RfxtrxCommandEntity
-
 from homeassistant.components.cover import (
     DEVICE_CLASS_BLIND,
     SUPPORT_CLOSE,
@@ -18,17 +22,15 @@ from homeassistant.components.cover import (
     SUPPORT_SET_TILT_POSITION,
     ATTR_POSITION,
     ATTR_TILT_POSITION,
-    CoverEntity,
+    CoverEntity
 )
-
 from homeassistant.const import (
     STATE_CLOSED,
     STATE_CLOSING,
     STATE_OPEN,
-    STATE_OPENING)
-
+    STATE_OPENING
+)
 from homeassistant.core import callback
-
 from .const import ATTR_AUTO_REPEAT
 
 # Values returned for blind position in various states
@@ -549,7 +551,6 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
             return
 
         self._apply_event(event)
-
         self.async_write_ha_state()
 
     # --------------------------------------------------------------------------------
@@ -574,19 +575,16 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
     async def _async_do_close_blind(self):
         """Callback to close the blind"""
         _LOGGER.info("LOW-LEVEL CLOSING BLIND")
-        # await self._async_send(self._device.send_close)
 
     # Replace with action to open blind
     async def _async_do_open_blind(self):
         """Callback to open the blind"""
         _LOGGER.info("LOW-LEVEL OPENING BLIND")
-        # await self._async_send(self._device.send_open)
 
     # Replace with action to stop blind
     async def _async_do_stop_blind(self):
         """Callback to stop the blind"""
         _LOGGER.info("LOW-LEVEL STOPPING BLIND")
-        # await self._async_send(self._device.send_stop)
 
     # Replace with action to tilt blind to mid position
     async def _async_do_tilt_blind_to_mid(self):

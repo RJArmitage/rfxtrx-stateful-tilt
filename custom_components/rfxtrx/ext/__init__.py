@@ -2,36 +2,24 @@ import logging
 import voluptuous as vol
 from homeassistant.components.rfxtrx.cover import RfxtrxCover
 from homeassistant.components.rfxtrx import CONF_SIGNAL_REPETITIONS
-from homeassistant.helpers import config_validation as cv, entity_platform
-
+from homeassistant.helpers import entity_platform
 from homeassistant.components.cover import (
-    DEVICE_CLASS_BLIND,
-    SUPPORT_CLOSE,
-    SUPPORT_OPEN,
-    SUPPORT_OPEN_TILT,
-    SUPPORT_CLOSE_TILT,
-    SUPPORT_STOP_TILT,
-    SUPPORT_STOP,
     SUPPORT_SET_POSITION,
     SUPPORT_SET_TILT_POSITION,
     ATTR_POSITION,
-    ATTR_TILT_POSITION)
-
+    ATTR_TILT_POSITION
+)
 from homeassistant.components.rfxtrx.const import (
     CONF_VENETIAN_BLIND_MODE,
     CONST_VENETIAN_BLIND_MODE_EU,
     CONST_VENETIAN_BLIND_MODE_US
 )
-
 from .louvolite_vogue_blind import LouvoliteVogueBlind
 from .somfy_venetian_blind import SomfyVenetianBlind
-
 from .const import (
     DEVICE_PACKET_TYPE_RFY,
-
     DEVICE_PACKET_TYPE_BLINDS1,
     DEVICE_PACKET_SUBTYPE_BLINDST19,
-
     ATTR_AUTO_REPEAT,
     SVC_UPDATE_POSITION,
     SVC_INCREASE_TILT,
@@ -87,21 +75,13 @@ def create_cover_entity(device, device_id, entity_info, event=None):
             "Detected a Louvolite Vogue vertical blind - let's go stateful!")
         return LouvoliteVogueBlind(device, device_id, entity_info)
     elif int(device_id[0], 16) == DEVICE_PACKET_TYPE_RFY:
-
         venetian_blind_mode = entity_info.get(CONF_VENETIAN_BLIND_MODE)
-        _LOGGER.info("Venetian blind mode " + str(venetian_blind_mode))
         if venetian_blind_mode in (CONST_VENETIAN_BLIND_MODE_US, CONST_VENETIAN_BLIND_MODE_EU):
             _LOGGER.info(
                 "Detected a Somfy RFY venetian blind - let's go stateful!")
             return SomfyVenetianBlind(device, device_id, entity_info)
-        else:
-            _LOGGER.info("Created default RFXTRX RFY cover " +
-                         device_id[2][0:2])
-            return RfxtrxCover(device, device_id,
-                               signal_repetitions=entity_info[CONF_SIGNAL_REPETITIONS],
-                               venetian_blind_mode=entity_info.get(CONF_VENETIAN_BLIND_MODE))
-    else:
-        _LOGGER.info("Created default RFXTRX cover " + device_id[2][0:2])
-        return RfxtrxCover(device, device_id,
-                           signal_repetitions=entity_info[CONF_SIGNAL_REPETITIONS],
-                           venetian_blind_mode=entity_info.get(CONF_VENETIAN_BLIND_MODE))
+
+    _LOGGER.info("Created default RFXTRX cover " + device_id[2][0:2])
+    return RfxtrxCover(device, device_id,
+                       signal_repetitions=entity_info[CONF_SIGNAL_REPETITIONS],
+                       venetian_blind_mode=entity_info.get(CONF_VENETIAN_BLIND_MODE))

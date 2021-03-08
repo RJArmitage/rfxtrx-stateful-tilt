@@ -53,6 +53,7 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         _LOGGER.info("Create Louvolite Vogue tilting blind " + str(device_id))
 
     async def _async_tilt_blind_to_step(self, steps, target):
+        """Callback to tilt the blind to some position"""
         _LOGGER.info("LOUVOLITE TILTING BLIND")
         if target == 0:
             movement = STATE_CLOSING
@@ -77,7 +78,6 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         await self._wait_and_set_state(delay, movement, STATE_CLOSED, BLIND_POS_CLOSED, target)
         return target
 
-    # Replace with action to close blind
     async def _async_do_close_blind(self):
         """Callback to close the blind"""
         _LOGGER.info("LOUVOLITE CLOSING BLIND")
@@ -85,7 +85,6 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         await self._async_send(self._device.send_command, CMD_VOGUE_CLOSE_CCW)
         return self._blindCloseSecs
 
-    # Replace with action to open blind
     async def _async_do_open_blind(self):
         """Callback to open the blind"""
         _LOGGER.info("LOUVOLITE OPENING BLIND")

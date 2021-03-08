@@ -23,7 +23,7 @@ from .const import (
     CONF_TILT_POS1_MS,
     CONF_TILT_POS2_MS,
     DEF_CLOSE_SECONDS,
-    DEF_OPEN_SECONDS,
+    DEF_OPEN_SECONDS, DEF_STEPS_MID,
     DEF_SYNC_SECONDS,
     DEF_TILT_POS1_MS,
     DEF_TILT_POS2_MS
@@ -60,8 +60,8 @@ class SomfyVenetianBlind(AbstractTiltingCover):
         device.type_string = DEVICE_TYPE
         super().__init__(device, device_id,
                          entity_info[CONF_SIGNAL_REPETITIONS], event,
-                         # entity_info[CONF_STEPS_MID],  # steps to mid point
-                         2,
+                         # entity_info.get(CONF_STEPS_MID, DEF_STEPS_MID),  # steps to mid point
+                         2,  # Currently support 2 steps to mid point
                          True,  # Supports mid point
                          True,  # Supports lift
                          False,  # Do not lift on open
@@ -75,16 +75,25 @@ class SomfyVenetianBlind(AbstractTiltingCover):
                          500  # Ms for each step
                          )
 
-        self._venetianBlindMode = entity_info.get(CONF_VENETIAN_BLIND_MODE)
+        self._venetian_blind_mode = entity_info.get(CONF_VENETIAN_BLIND_MODE)
         self._tiltPos1Sec = entity_info.get(
             CONF_TILT_POS1_MS, DEF_TILT_POS1_MS) / 1000
         self._tiltPos2Sec = entity_info.get(
             CONF_TILT_POS2_MS, DEF_TILT_POS2_MS) / 1000
 
+    @property
+    def icon(self):
+        """Return the icon property."""
+        icon = "mdi:window-shutter" if self.is_closed else "mdi:window-shutter-open"
+        _LOGGER.debug("Returned icon attribute = " + icon)
+        return icon
+
     # Handle tilting a somfy blind. At present this is done by simulating a tilt using
     # an open or close followed by a delay. This needs to be replaced by a number of
     # tilt operations when supported by RFXCOM
+
     async def _async_tilt_blind_to_step(self, steps, target):
+        """Callback to tilt the blind to some position"""
         _LOGGER.info("SOMFY VENETIAN TILTING BLIND")
         if target == 0:
             await self._async_set_cover_position(BLIND_POS_CLOSED)
@@ -94,7 +103,7 @@ class SomfyVenetianBlind(AbstractTiltingCover):
             if steps != -1:
                 await self._async_tilt_blind_to_mid_step()
 
-            await self._async_send(self._device.send_command, CMD_SOMFY_DOWN)
+            await self._async_somfy_blind_down()
             await asyncio.sleep(self._tiltPos1Sec)
             await self._async_send(self._device.send_command, CMD_SOMFY_STOP)
 
@@ -106,7 +115,7 @@ class SomfyVenetianBlind(AbstractTiltingCover):
             if steps != 1:
                 await self._async_tilt_blind_to_mid_step()
 
-            await self._async_send(self._device.send_command, CMD_SOMFY_UP)
+            await self._async_somfy_blind_up()
             await asyncio.sleep(self._tiltPos2Sec)
             await self._async_send(self._device.send_command, CMD_SOMFY_STOP)
 
@@ -115,18 +124,16 @@ class SomfyVenetianBlind(AbstractTiltingCover):
 
         return target
 
-    # Replace with action to close blind
     async def _async_do_close_blind(self):
         """Callback to close a Somfy blind"""
         _LOGGER.info("SOMFY VENETIAN CLOSING BLIND")
         await self._set_state(STATE_CLOSING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send(self._device.send_command, CMD_SOMFY_DOWN)
+        await self._async_somfy_blind_down()
 
-    # Replace with action to open blind
     async def _async_do_open_blind(self):
         """Callback to open a Somfy blind"""
         _LOGGER.info("SOMFY VENETIAN OPENING BLIND")
-        await self._async_send(self._device.send_command, CMD_SOMFY_UP)
+        await self._async_somfy_blind_up()
 
     async def _async_do_tilt_blind_to_mid(self):
         """Callback to tilt a Somfy blind to mid"""
@@ -134,3 +141,23 @@ class SomfyVenetianBlind(AbstractTiltingCover):
         await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
         await self._async_send(self._device.send_command, CMD_SOMFY_STOP)
         return self._blindSyncSecs
+
+    async def _async_somfy_blind_down(self):
+        """Callback to move a Somfy venetian blind down - varies between regions"""
+        if self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_US:
+            await self._async_send(self._device.send_command, CMD_SOMFY_DOWN05SEC)
+        elif self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_EU:
+            await self._async_send(self._device.send_command, CMD_SOMFY_DOWN2SEC)
+        else:
+            _LOGGER.warn("Unexpected DOWN command for a none-EU/US device")
+            await self._async_send(self._device.send_command, CMD_SOMFY_DOWN)
+
+    async def _async_somfy_blind_up(self):
+        """Callback to move a Somfy venetian blind up - varies between regions"""
+        if self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_US:
+            await self._async_send(self._device.send_command, CMD_SOMFY_UP05SEC)
+        elif self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_EU:
+            await self._async_send(self._device.send_command, CMD_SOMFY_UP2SEC)
+        else:
+            _LOGGER.warn("Unexpected UP command for a none-EU/US device")
+            await self._async_send(self._device.send_command, CMD_SOMFY_UP)

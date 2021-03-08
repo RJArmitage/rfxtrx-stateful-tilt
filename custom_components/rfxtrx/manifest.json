@@ -1,6 +1,6 @@
 {
   "name": "RFXCOM RFXtrx + Stateful Tilt",
-  "version": "0.1",
+  "version": "1.0.0",
   "domain": "rfxtrx",
   "documentation": "https://github.com/RJArmitage/rfxtrx-stateful-tilt",
   "requirements": [ "pyRFXtrx==0.26.1" ],

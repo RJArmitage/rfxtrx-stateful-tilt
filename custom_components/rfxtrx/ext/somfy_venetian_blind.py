@@ -84,7 +84,12 @@ class SomfyVenetianBlind(AbstractTiltingCover):
     @property
     def icon(self):
         """Return the icon property."""
-        icon = "mdi:window-shutter" if self.is_closed else "mdi:window-shutter-open"
+        if self.is_opening or self.is_closing:
+            icon = "mdi:window-shutter-alert"
+        elif self.is_closed:
+            icon = "mdi:window-shutter"
+        else:
+            icon = "mdi:window-shutter-open"
         _LOGGER.debug("Returned icon attribute = " + icon)
         return icon
 
